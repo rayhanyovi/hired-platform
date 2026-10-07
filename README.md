@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Amara Desk
 
-## Getting Started
+A concept for HeyAmara's AI platform: the recruiter's daily desk, where AI does the volume and the recruiter keeps the relationships. All data and AI responses are mocked.
 
-First, run the development server:
+Built around three things Harvey Jutton keeps writing about:
+
+| Insight | Screen |
+|---|---|
+| "Time kills deals" | **Today** and **Pipeline**: every deal has a heat bar that drains while it sits untouched. It drains faster near an offer, and deals are ranked by fee × odds of closing × how cold they are |
+| "You didn't ghost me, you told the truth" | **Follow-ups**: Amara drafts an honest update for everyone waiting on you (rejections included). You review and send |
+| "I've never done that sum" | **The Sum**: billings vs take-home, and what the same desk would earn under your own name |
+
+Plus **⌘K Ask Amara** for questions about your desk.
+
+### Running the agency
+
+| Area | What it does |
+|---|---|
+| **Clients** | Every company you hire for or are pitching (Active / Prospect, TOB status), the roles each one is hiring for, and everyone attached to each role: applied, shortlisted, in pipeline, placed |
+| **Applicants** | Applications from job ads and email. **Sync** simulates new ones arriving; Amara screens each CV against the brief. Shortlist (S) or decline (D). Declining queues an honest update in Follow-ups |
+| **Candidates** | The curated pool across clients. Reach out, then add to pipeline (creates a deal) |
+| **Deal page** | `/deals/[id]`: stage stepper, Amara's read, a discussion thread with @mentions and approval requests, documents, activity |
+| **Documents** | Generate a TOB, candidate submission, offer recap or invoice, filled from deal data. Log what clients send you (offer letters, contracts, signed TOBs). One register for both |
+| **Team** | Owner / Recruiter / Resourcer, approval rules (fee floor, invoice sign-off), a permissions matrix, and "view as" to demo each role |
+| **Audit log** | Every action from a single event stream (the same one that feeds each deal's Activity). Filter, then export CSV or JSON. Exporting is itself logged |
+| **Learnings** | Placeholder curriculum: videos, readings, quizzes |
+
+State lives in memory, so a full page reload resets the demo.
+
+## Design rules
+
+- **Violet means Amara.** The UI is monochrome, and the brand gradient only appears on AI-authored content, so you always know what a machine wrote.
+- **Colour means attention.** Amber means cooling and frost blue means cold. Healthy deals stay neutral.
+- **AI drafts, humans send.** Nothing goes out without a click, and every draft shows the facts it was built from.
+- The visual language comes from heyamara.com: Playfair Display, Inter, JetBrains Mono, #181818 surfaces, and the two-stroke "A".
+
+## Run
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Stack: Next.js 16 (App Router, Cache Components), React 19, Tailwind v4, lucide-react. Mock data lives in `lib/data.ts`, and every "AI" output comes from `lib/ai.ts`, so swapping in a real model means replacing those functions with streamed API calls.
