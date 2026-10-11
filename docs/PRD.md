@@ -280,7 +280,7 @@ Priority: **M** must (in prototype), **S** should (in prototype, could be cut), 
 ### 8.12 Audit log, Learnings, Tours, Notifications
 | ID | Requirement | Pri | Acceptance criteria |
 |---|---|---|---|
-| X-1 | Audit log: filter by category, member, text; export CSV / JSON (Owner only); export is logged | M | Events can't be edited |
+| X-1 | Audit trail: timestamp to the second in WIB, actor and role, source module, affected records and field-level before/after values. Filter by module, actor, change type or session; search records and field values; export CSV / JSON (Owner only). | M | Live changes are captured across the store's data actions, including related records. Historical fixtures without snapshots are labelled. Events have no edit/delete controls; demo history resets on reload. Exports are logged. |
 | X-2 | Learnings: 3 tracks, 13 placeholder lessons (video / reading / quiz), progress, "continue where you left off" | S | Quiz pass marks lesson done |
 | X-3 | Tours on every page via `?` or help button | M | 69 steps across 15 tours |
 | X-4 | Notifications: "Waiting on you" | S | |

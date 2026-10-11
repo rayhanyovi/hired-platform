@@ -47,7 +47,7 @@ const PAGES: [string, string, string][] = [
   ["Follow-ups", "/follow-ups", "updates ghosting rejections"],
   ["Documents", "/documents", "terms tob invoices contracts offer letters"],
   ["Team", "/team", "members roles approvals permissions"],
-  ["Audit log", "/audit", "events history export"],
+  ["Audit trail", "/audit", "events history export changes actors modules"],
   ["Learnings", "/learnings", "lessons courses quizzes"],
 ];
 

@@ -130,9 +130,12 @@ One context, `DeskProvider`, exposing `useDesk(): DeskState`. Memory only; reloa
 | `addToPipeline(id)` | Creates deal at Sourced, fee = max(floor, 20%) | `deal.created` |
 | `addClient(c)`, `setClientStatus(id, s)` | | `client.added` / `client.status_changed` |
 | `exportedAudit(format, n)` | | `audit.exported` |
-| `setLessonDone(id, done)` | | — |
+| `setLessonDone(id, done)` | Records lesson completion/reopening | `learning.progress_changed` |
+| `setHomeTaskDone(id, name, done)` | Records Home task completion/reopening | `task.completion_changed` |
 
-`log()` is the single write path for history. Events carry `actorId` (member id, `amara` or `system`), `kind`, optional `dealId`. Deal Activity and the Audit log are two filtered views of the same array; audit categories come from the action prefix.
+`log()` is the single write path for history. Live audit events use the real wall-clock timestamp, displayed in WIB with seconds and exported as ISO UTC. Events carry `actorId` (member id, `amara` or `system`), `kind`, source `module`, optional `dealId` and `reason`, plus `records` with entity IDs, names, modules, operation types and field-level before/after values. Deal Activity and the Audit Trail remain views of the same event array.
+
+`useTrackedData` mirrors collection updates synchronously and computes record diffs through `lib/audit.ts`. Pending diffs are consumed by the action's `log()` call, grouping related writes (for example applicant status plus candidate creation) into one event. Rules, Home tasks and learning completion add explicit field diffs. Applicant sync records each incoming application under System, then logs the batch summary and Amara screening activity. No-op guards avoid duplicate status and stage changes. Source-module filters also match affected record modules. CSV/JSON exports include full diffs, with CSV formula escaping. Only Owners can export through the UI. This remains an in-memory prototype: no database persistence or server-enforced audit integrity; production auditing must be written atomically with mutations on the server. Historical fixtures have no reconstructed before/after data.
 
 **Cross-page intents** use store setters rather than URL params (`selectApplicant`, `selectFollowUp`, `selectCandidate`, `setJobFilter`, `setTeamView`, `setDocDealId`, `ask`). Reason: `useSearchParams` in a client component requires a Suspense boundary under Cache Components, and in-memory intents also survive Activity-preserved routes.
 

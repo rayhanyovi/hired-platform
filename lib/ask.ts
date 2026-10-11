@@ -22,7 +22,7 @@ import {
   STAGE_ODDS,
 } from "./deal";
 import { DOC_KIND_LABEL, tobStatus } from "./documents";
-import { invoicesFor, SUGGESTIONS, TEAM_BOARD } from "./home";
+import { FIRST_STEPS, INVOICES, invoicesFor, SUGGESTIONS, TASKS, TEAM_BOARD } from "./home";
 import { LESSONS } from "./learnings";
 import type { DeskState } from "./store";
 import { memberName } from "./store";
@@ -193,7 +193,7 @@ export function askContext(pathname: string, d: DeskState): AskContext {
     case "/audit":
       return {
         key: "audit",
-        label: "Audit log",
+        label: "Audit trail",
         summary: `${plural(d.events.length, "event")} on record`,
         suggestions: [
           "What happened today?",
@@ -255,6 +255,36 @@ export function askReply(
 ): Reply {
   const q = prompt.toLowerCase();
   const key = routeKey(ctx?.key ?? "general", q);
+
+  if ((key === "home" || key === "general") && has(q, "plan my day", "what should i do today", "today's priorities")) {
+    if (d.homeStage === "day1") {
+      const remaining = FIRST_STEPS.filter((step) => !d.completedHomeTasks.includes(step.id));
+      return {
+        text: remaining.length
+          ? "Let's make your first day manageable. Work through these in order; each step sets up the next. This is a suggested plan, so nothing has been changed or sent."
+          : "You've completed your first steps. Review your client brief and candidate shortlist, then choose your next outreach. Nothing has been changed or sent.",
+        blocks: [list(remaining.map((step, index) => ({ title: `${index + 1}. ${step.title}`, detail: step.detail, href: step.id === "s2" ? "/clients" : step.id === "s3" ? "/documents" : step.id === "s4" ? "/candidates" : "/" })))],
+        followups: remaining.length ? [remaining[0].prompt] : ["Find top candidates for a role"],
+      };
+    }
+    const priorities: ListItem[] = [];
+    const urgent = d.deals.filter(needsAttention).sort((a, b) => riskValue(b) - riskValue(a));
+    if (urgent.length) {
+      const deal = urgent[0];
+      priorities.push({ title: `Protect ${deal.candidate.name}'s deal first`, meta: `${plural(urgent.length, "deal")} ${urgent.length === 1 ? "needs" : "need"} attention`, detail: `${deal.role.title} at ${deal.role.client} · ${money(fee(deal))} fee. Last touched ${idleLabel(deal.hoursIdle)} ago; confirm the next step with the client.`, href: `/deals/${deal.id}`, tone: "warm" });
+    }
+    const quiet = TASKS.filter((task) => !d.completedHomeTasks.includes(task.id)).sort((a, b) => b.priority - a.priority);
+    if (quiet.length) priorities.push({ title: `Reconnect with ${quiet[0].company}`, meta: `${plural(quiet.length, "quiet client")} on your task list`, detail: `Start with the highest-priority follow-up: ${quiet[0].detail}. Review a short draft before sending it.`, href: "/", tone: "warm" });
+    const waiting = [...d.followUps].sort((a, b) => b.daysWaiting - a.daysWaiting);
+    if (waiting.length) priorities.push({ title: "Give waiting candidates an update", meta: plural(waiting.length, "follow-up"), detail: "Work from the longest wait first. An honest no-news update is better than silence.", href: "/follow-ups" });
+    const draft = INVOICES.find((invoice) => invoice.status === "draft");
+    if (draft) priorities.push({ title: `Review ${draft.client}'s draft invoice`, meta: money(draft.amount), detail: "Check the placement details and required approval before it is sent.", href: "/documents" });
+    return {
+      text: priorities.length ? "Here's a suggested order for today: protect active deals, reconnect with clients, keep candidates informed, then clear the invoice draft. Based on your current demo desk; nothing has been changed or sent." : "Your urgent queues are clear. Use today to develop a client relationship and review your pipeline.",
+      blocks: [list(priorities.map((item, index) => ({ ...item, title: `${index + 1}. ${item.title}` })))],
+      followups: ["Which deals are at risk?", "Draft follow-ups for my quiet clients"],
+    };
+  }
 
   if (key === "followups") {
     const waiting = [...d.followUps].sort(

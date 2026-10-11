@@ -11,8 +11,7 @@ import { AmaraMessage, UserMessage, type Message } from "../home/thread";
 import { AmaraButton, AmaraMark, Kbd, cx } from "../ui/primitives";
 
 const DRAWER_W = "sm:w-[440px]";
-let seq = 0;
-const nextId = () => `ask${++seq}`;
+const nextId = () => `ask-${crypto.randomUUID()}`;
 
 /** On the Chat page Amara already has the whole screen, so the drawer stays out of the way. */
 const pageHasChat = (pathname: string) => pathname === "/chat";

@@ -198,7 +198,7 @@ function DealDetail({ deal }: { deal: Deal }) {
             <SectionTitle
               aside={
                 <Link href="/audit" className="inline-flex items-center gap-1 text-[12px] text-fg-faint hover:text-fg">
-                  Audit log <ArrowUpRight className="size-3" />
+                  Audit trail <ArrowUpRight className="size-3" />
                 </Link>
               }
             >

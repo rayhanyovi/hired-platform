@@ -214,3 +214,5 @@
 | D-142 | Slower synchronised 1.35s docking; dashboard stagger runs only after reload and skips tab switches and internal navigation | 11 Oct 2026 |
 | D-143 | Clients overview has four coloured icon tiles using the shared Home metric styling | 11 Oct 2026 |
 | D-144 | Pipeline hierarchy: stronger stage and candidate headings, secondary fee summaries, clearer filters and amber attention indicators | 11 Oct 2026 |
+| D-145 | Audit Trail with real timestamps, actor roles, modules, record IDs, before/after field diffs, related writes, filters and enriched owner exports; tracked collection mutations, Home tasks and lessons | 11 Oct 2026 |
+| D-146 | Home Plan my day AI action with prioritised current-desk guidance and new-member steps; shared toolbar select chevrons inset with reserved right padding | 11 Oct 2026 |

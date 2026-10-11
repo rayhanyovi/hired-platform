@@ -18,12 +18,15 @@ import { DEALS, FOLLOW_UPS, STAGES } from "./data";
 import { money } from "./deal";
 import { INITIAL_COMPLETED } from "./learnings";
 import { liveNow } from "./time";
+import { changedFields, moduleForAction } from "./audit";
+import { useTrackedData } from "./use-tracked-data";
 import type {
   AgencyDoc,
   Applicant,
   Approval,
   ApprovalRules,
   AuditEvent,
+  AuditRecord,
   Candidate,
   Client,
   Comment,
@@ -78,19 +81,21 @@ function useDeskState() {
 
   /* Data */
   const [currentUserId, setCurrentUser] = useState("sam");
-  const [deals, setDeals] = useState(DEALS);
-  const [followUps, setFollowUps] = useState(FOLLOW_UPS);
+  const pendingAudit = useRef<AuditRecord[]>([]);
+  const [deals, setDeals] = useTrackedData(DEALS, "Pipeline", "Deal", pendingAudit);
+  const [followUps, setFollowUps] = useTrackedData(FOLLOW_UPS, "Follow-ups", "Follow-up", pendingAudit);
   const [sentCount, setSentCount] = useState(0);
   const [completedLessons, setCompletedLessons] = useState(INITIAL_COMPLETED);
+  const [completedHomeTasks, setCompletedHomeTasks] = useState<string[]>([]);
   const [events, setEvents] = useState<AuditEvent[]>(seedEvents);
-  const [comments, setComments] = useState<Comment[]>(COMMENTS);
-  const [approvals, setApprovals] = useState<Approval[]>(APPROVALS);
-  const [documents, setDocuments] = useState<AgencyDoc[]>(DOCUMENTS);
+  const [comments, setComments] = useTrackedData<Comment>(COMMENTS, "Pipeline", "Comment", pendingAudit);
+  const [approvals, setApprovals] = useTrackedData<Approval>(APPROVALS, "Approvals", "Approval", pendingAudit);
+  const [documents, setDocuments] = useTrackedData<AgencyDoc>(DOCUMENTS, "Documents", "Document", pendingAudit);
   const [rules, setRules] = useState<ApprovalRules>(DEFAULT_RULES);
-  const [jobs, setJobs] = useState<Job[]>(JOBS);
-  const [clients, setClients] = useState<Client[]>(CLIENTS);
-  const [applicants, setApplicants] = useState<Applicant[]>(APPLICANTS);
-  const [candidates, setCandidates] = useState<Candidate[]>(CANDIDATES);
+  const [jobs, setJobs] = useTrackedData<Job>(JOBS, "Clients", "Job", pendingAudit);
+  const [clients, setClients] = useTrackedData<Client>(CLIENTS, "Clients", "Client", pendingAudit);
+  const [applicants, setApplicants] = useTrackedData<Applicant>(APPLICANTS, "Applicants", "Applicant", pendingAudit);
+  const [candidates, setCandidates] = useTrackedData<Candidate>(CANDIDATES, "Candidates", "Candidate", pendingAudit);
   const [syncing, setSyncing] = useState(false);
   const synced = useRef(false);
 
@@ -106,7 +111,9 @@ function useDeskState() {
   /** The single write path for history. Every meaningful action goes through here. */
   const log = useCallback(
     (e: NewEvent) => {
-      setEvents((prev) => [{ id: uid("ev"), at: liveNow(), actorId: e.actorId ?? currentUserId, ...e }, ...prev]);
+      const records = pendingAudit.current.splice(0);
+      const event: AuditEvent = { ...e, id: uid("ev"), at: Date.now(), actorId: e.actorId ?? currentUserId, module: e.module ?? moduleForAction(e.action), records: [...records, ...(e.records ?? [])] };
+      setEvents((prev) => [event, ...prev]);
     },
     [currentUserId],
   );
@@ -117,19 +124,22 @@ function useDeskState() {
 
   const logTouch = useCallback(
     (dealId: string, event: Omit<TimelineEvent, "hoursAgo">) => {
+      if (!deals.some(d => d.id === dealId)) return;
       setDeals((prev) => prev.map((d) => (d.id === dealId ? { ...d, hoursIdle: 0 } : d)));
       log({ action: DEAL_ACTION[event.kind], summary: event.text, kind: event.kind, dealId });
     },
-    [log],
+    [log, deals, setDeals],
   );
 
   const moveTo = useCallback(
     (dealId: string, stage: Stage) => {
+      const deal = deals.find(d => d.id === dealId);
+      if (!deal || deal.stage === stage) return;
       const label = STAGES.find((s) => s.id === stage)?.label ?? stage;
       setDeals((prev) => prev.map((d) => (d.id !== dealId || d.stage === stage ? d : { ...d, stage, hoursIdle: 0 })));
       log({ action: "deal.stage_changed", summary: `Moved ${dealName(dealId)} to ${label}`, kind: "stage", dealId });
     },
-    [log, dealName],
+    [log, dealName, deals, setDeals],
   );
 
   const advance = useCallback(
@@ -149,7 +159,7 @@ function useDeskState() {
       setComments((prev) => [...prev, { id: uid("c"), dealId, authorId: currentUserId, at: liveNow(), body, approvalId }]);
       if (!approvalId) log({ action: "comment.added", summary: `Commented on ${dealName(dealId)}`, kind: "comment", dealId });
     },
-    [currentUserId, log, dealName],
+    [currentUserId, log, dealName, setComments],
   );
 
   const requestApproval = useCallback(
@@ -160,7 +170,7 @@ function useDeskState() {
       log({ action: "approval.requested", summary: `Requested approval: ${a.title} on ${dealName(a.dealId)}`, kind: "approval", dealId: a.dealId });
       return id;
     },
-    [currentUserId, addComment, log, dealName],
+    [currentUserId, addComment, log, dealName, setApprovals],
   );
 
   /** Owners change fees directly; anyone else under the floor goes through approval. */
@@ -168,6 +178,7 @@ function useDeskState() {
     (dealId: string, pct: number, reason: string): "applied" | "requested" => {
       const deal = deals.find((d) => d.id === dealId);
       if (!deal) return "applied";
+      if (deal.feePct === pct) return "applied";
       if (rules.feeFloorEnabled && pct < rules.feeFloorPct && !isOwner) {
         requestApproval(
           {
@@ -184,13 +195,14 @@ function useDeskState() {
       setDeals((prev) => prev.map((d) => (d.id === dealId ? { ...d, feePct: pct } : d)));
       log({
         action: "deal.fee_changed",
+        reason,
         summary: `Changed fee on ${deal.candidate.name} from ${Math.round(deal.feePct * 100)}% to ${Math.round(pct * 100)}%`,
         kind: "note",
         dealId,
       });
       return "applied";
     },
-    [deals, rules, isOwner, requestApproval, log],
+    [deals, rules, isOwner, requestApproval, log, setDeals],
   );
 
   const decideApproval = useCallback(
@@ -213,7 +225,7 @@ function useDeskState() {
         dealId: a.dealId,
       });
     },
-    [approvals, isOwner, currentUserId, log, dealName],
+    [approvals, isOwner, currentUserId, log, dealName, setApprovals, setDeals, setDocuments],
   );
 
   /* ── Documents ── */
@@ -238,17 +250,17 @@ function useDeskState() {
       }
       return { id, status };
     },
-    [rules.invoiceApproval, isOwner, currentUserId, log, requestApproval],
+    [rules.invoiceApproval, isOwner, currentUserId, log, requestApproval, setDocuments],
   );
 
   const setDocStatus = useCallback(
     (id: string, status: AgencyDoc["status"]) => {
       const doc = documents.find((d) => d.id === id);
-      if (!doc) return;
+      if (!doc || doc.status === status) return;
       setDocuments((prev) => prev.map((d) => (d.id === id ? { ...d, status } : d)));
       log({ action: "document.status_changed", summary: `Marked ${doc.title} as ${status}`, kind: "document", dealId: doc.dealId });
     },
-    [documents, log],
+    [documents, log, setDocuments],
   );
 
   /* ── Team ── */
@@ -256,10 +268,13 @@ function useDeskState() {
   const updateRules = useCallback(
     (next: Partial<ApprovalRules>, summary: string) => {
       if (!isOwner) return;
+      const fields = changedFields(rules, { ...rules, ...next });
+      if (!fields.length) return;
+      pendingAudit.current.push({ module: "Team", entityType: "Approval rules", entityId: "agency-rules", entityName: "Agency approval rules", operation: "updated", fields });
       setRules((prev) => ({ ...prev, ...next }));
       log({ action: "team.rules_changed", summary, kind: "team" });
     },
-    [isOwner, log],
+    [isOwner, log, rules],
   );
 
   /* ── Follow-ups ── */
@@ -267,11 +282,12 @@ function useDeskState() {
   const markSent = useCallback(
     (followUpId: string) => {
       const f = followUps.find((x) => x.id === followUpId);
+      if (!f) return;
       setFollowUps((prev) => prev.filter((x) => x.id !== followUpId));
       setSentCount((n) => n + 1);
       if (f) log({ action: "followup.sent", summary: `Sent an update to ${f.name} (${f.role})`, kind: "email", dealId: f.dealId });
     },
-    [followUps, log],
+    [followUps, log, setFollowUps],
   );
 
   /* ── Sourcing ── */
@@ -281,7 +297,7 @@ function useDeskState() {
       setJobs((prev) => [{ ...job, id: uid("job"), postedAt: liveNow(), status: "open" }, ...prev]);
       log({ action: "job.posted", summary: `Posted ${job.title} (${job.client}) to ${job.channels.join(", ")}`, kind: "sourcing" });
     },
-    [log],
+    [log, setJobs],
   );
 
   /** Simulates pulling new applications from job boards and the inbox. */
@@ -300,6 +316,7 @@ function useDeskState() {
     batch.forEach((a, i) => {
       setTimeout(() => {
         setApplicants((prev) => [{ ...a, at: liveNow() }, ...prev]);
+        log({ action: "sourcing.application_received", summary: `Received ${a.name}'s application`, kind: "sourcing", actorId: "system" });
         if (i === batch.length - 1) {
           setSyncing(false);
           notify(`${batch.length} new applications. Amara has screened them.`);
@@ -308,12 +325,12 @@ function useDeskState() {
         }
       }, 1100 + i * 650);
     });
-  }, [syncing, notify, log]);
+  }, [syncing, notify, log, setApplicants]);
 
   const decideApplicant = useCallback(
     (id: string, decision: "shortlist" | "reject") => {
       const a = applicants.find((x) => x.id === id);
-      if (!a) return;
+      if (!a || a.status === "shortlisted" || a.status === "rejected") return;
       const job = jobs.find((j) => j.id === a.jobId);
       setApplicants((prev) => prev.map((x) => (x.id === id ? { ...x, status: decision === "shortlist" ? "shortlisted" : "rejected", isNew: false } : x)));
       if (decision === "shortlist") {
@@ -357,16 +374,17 @@ function useDeskState() {
         log({ action: "sourcing.rejected", summary: `Declined ${a.name} for ${job?.title ?? "a job"}. Update queued in Follow-ups`, kind: "sourcing" });
       }
     },
-    [applicants, jobs, currentUserId, log],
+    [applicants, jobs, currentUserId, log, setApplicants, setCandidates, setFollowUps],
   );
 
   const markContacted = useCallback(
     (candidateId: string) => {
       const c = candidates.find((x) => x.id === candidateId);
+      if (!c || c.status === "contacted" || c.status === "pipeline") return;
       setCandidates((prev) => prev.map((x) => (x.id === candidateId ? { ...x, status: "contacted" } : x)));
       if (c) log({ action: "sourcing.contacted", summary: `Reached out to ${c.name}`, kind: "sourcing" });
     },
-    [candidates, log],
+    [candidates, log, setCandidates],
   );
 
   const addToPipeline = useCallback(
@@ -374,6 +392,7 @@ function useDeskState() {
       const c = candidates.find((x) => x.id === candidateId);
       const job = jobs.find((j) => j.id === c?.jobId);
       if (!c || !job) return null;
+      if (c.status === "pipeline") return c.dealId ?? null;
       const id = uid("deal");
       const [title, company = ""] = c.headline.split(" · ");
       const first = c.name.split(" ")[0];
@@ -397,10 +416,10 @@ function useDeskState() {
       };
       setDeals((prev) => [deal, ...prev]);
       setCandidates((prev) => prev.map((x) => (x.id === candidateId ? { ...x, status: "pipeline", dealId: id } : x)));
-      log({ action: "deal.created", summary: `Added ${c.name} to the pipeline for ${job.title} at ${job.client}`, kind: "stage", dealId: id });
+      log({ action: "deal.created", module: "Candidates", summary: `Added ${c.name} to the pipeline for ${job.title} at ${job.client}`, kind: "stage", dealId: id });
       return id;
     },
-    [candidates, jobs, me, currentUserId, rules.feeFloorPct, log],
+    [candidates, jobs, me, currentUserId, rules.feeFloorPct, log, setCandidates, setDeals],
   );
 
   /* ── Clients ── */
@@ -412,28 +431,39 @@ function useDeskState() {
       log({ action: "client.added", summary: `Added ${c.name} as a ${c.status === "active" ? "client" : "prospect"}`, kind: "client" });
       return id;
     },
-    [log],
+    [log, setClients],
   );
 
   const setClientStatus = useCallback(
     (id: string, status: Client["status"]) => {
       const c = clients.find((x) => x.id === id);
+      if (!c || c.status === status) return;
       setClients((prev) => prev.map((x) => (x.id === id ? { ...x, status } : x)));
       if (c) log({ action: "client.status_changed", summary: `Marked ${c.name} as ${status === "active" ? "an active client" : "a prospect"}`, kind: "client" });
     },
-    [clients, log],
+    [clients, log, setClients],
   );
 
   /* ── Learnings ── */
 
   const setLessonDone = useCallback((lessonId: string, done: boolean) => {
+    const before = completedLessons.includes(lessonId);
+    if (before === done) return;
     setCompletedLessons((prev) => (done ? (prev.includes(lessonId) ? prev : [...prev, lessonId]) : prev.filter((id) => id !== lessonId)));
-  }, []);
+    log({ action: "learning.progress_changed", summary: `${done ? "Completed" : "Reopened"} lesson ${lessonId}`, kind: "system", records: [{ module: "Learnings", entityType: "Lesson", entityId: lessonId, entityName: lessonId, operation: "updated", fields: [{ field: "completed", before, after: done }] }] });
+  }, [completedLessons, log]);
 
   const exportedAudit = useCallback(
     (format: string, count: number) => log({ action: "audit.exported", summary: `Exported ${count} audit events as ${format.toUpperCase()}`, kind: "system" }),
     [log],
   );
+
+  const setHomeTaskDone = useCallback((id: string, name: string, done: boolean) => {
+    const before = completedHomeTasks.includes(id);
+    if (before === done) return;
+    setCompletedHomeTasks(prev => done ? [...prev, id] : prev.filter(x => x !== id));
+    log({ action: "task.completion_changed", module: "Home", summary: `${done ? "Completed" : "Reopened"} ${name}`, kind: "note", records: [{ module: "Home", entityType: "Task", entityId: id, entityName: name, operation: "updated", fields: [{ field: "completed", before, after: done }] }] });
+  }, [completedHomeTasks, log]);
 
   return {
     // ui
@@ -514,6 +544,8 @@ function useDeskState() {
     // learnings
     completedLessons,
     setLessonDone,
+    completedHomeTasks,
+    setHomeTaskDone,
   };
 }
 

@@ -7,7 +7,7 @@ import { metricsFor, RANGE_LABEL, type Range, type Stage } from "@/lib/home";
 import { useDesk } from "@/lib/store";
 import { AmaraByline, StreamText } from "../ai/stream";
 import { compactSelectClass } from "../ui/modal";
-import { cx } from "../ui/primitives";
+import { AmaraButton, cx } from "../ui/primitives";
 import { Analytics } from "./analytics";
 import { InvoicesPanel, LeaderboardPanel, MetricsRow, TasksPanel } from "./overview";
 
@@ -224,6 +224,9 @@ function Overview({
         </div>
         <span className="hidden text-[13px] text-fg-faint md:inline">{stage === "day1" ? "Your numbers start with your first call." : "Ask Amara about any number."}</span>
         <div className="ml-auto flex items-center gap-2">
+          <AmaraButton size="sm" className="h-8 whitespace-nowrap" onClick={() => onAsk("Plan my day")}>
+            Plan my day
+          </AmaraButton>
           <button
             onClick={() => setHidden(!hidden)}
             aria-pressed={hidden}

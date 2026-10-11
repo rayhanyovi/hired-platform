@@ -83,4 +83,4 @@ const fieldBase =
 export const inputClass = `h-9 w-full text-[13px] ${fieldBase}`;
 
 /** Toolbar-sized select that sizes to its content. */
-export const compactSelectClass = `h-8 w-auto max-w-full text-[12px] ${fieldBase}`;
+export const compactSelectClass = `compact-select h-8 w-auto max-w-full text-[12px] ${fieldBase}`;

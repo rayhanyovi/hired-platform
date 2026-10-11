@@ -67,7 +67,7 @@ export function useNav() {
       label: "Agency",
       items: [
         { href: "/team", label: "Team", icon: ShieldCheck, count: isOwner ? pending : 0, attention: true },
-        { href: "/audit", label: "Audit log", icon: ScrollText },
+        { href: "/audit", label: "Audit trail", icon: ScrollText },
         { href: "/learnings", label: "Learnings", icon: GraduationCap },
       ],
     },

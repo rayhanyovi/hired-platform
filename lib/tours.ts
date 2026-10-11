@@ -131,11 +131,11 @@ const TOURS: Record<string, Tour> = {
     ],
   },
   "/audit": {
-    name: "Audit log",
+    name: "Audit trail",
     steps: [
-      { target: "page-header", title: "Everything, on the record", body: "Every action on the desk, from people, Amara and the system. Events can't be edited or deleted." },
-      { target: "audit-filters", title: "Filter", body: "By category, by person, or by text. Exports include exactly what you've filtered." },
-      { target: "audit-table", title: "The log", body: "Time, who, the machine-readable action, and what happened. Deal events link back to the deal." },
+      { target: "page-header", title: "Every change, on the record", body: "Changes from people, Amara and the system. This demo keeps history for the current session and resets on reload." },
+      { target: "audit-filters", title: "Find a change", body: "Filter by module, actor, change type or session. Search record names and field values. Exports include your filtered results." },
+      { target: "audit-table", title: "Before and after", body: "See exact timestamps, actors and modules. Expand a change to compare field values and view affected record IDs." },
       { target: "page-actions", title: "Export", body: "CSV or JSON, Owner only. The export itself is recorded too." },
     ],
   },

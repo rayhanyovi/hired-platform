@@ -245,7 +245,7 @@ export function TasksPanel({
   stage: Stage;
   onAsk: (prompt: string) => void;
 }) {
-  const [done, setDone] = useState<string[]>([]);
+  const { completedHomeTasks: done, setHomeTaskDone } = useDesk();
 
   if (stage === "day1") {
     return (
@@ -262,7 +262,7 @@ export function TasksPanel({
               <li key={s.id}>
                 <button
                   onClick={() => {
-                    setDone((d) => (d.includes(s.id) ? d : [...d, s.id]));
+                    setHomeTaskDone(s.id, s.title, true);
                     onAsk(s.prompt);
                   }}
                   className="group flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-raised"
@@ -347,9 +347,7 @@ export function TasksPanel({
                   aria-checked={isDone}
                   aria-label={`Done: follow up ${t.company}`}
                   onClick={() =>
-                    setDone((d) =>
-                      isDone ? d.filter((x) => x !== t.id) : [...d, t.id],
-                    )
+                    setHomeTaskDone(t.id, `Follow up ${t.company}`, !isDone)
                   }
                   className={cx(
                     "mt-px grid size-[18px] shrink-0 place-items-center rounded-[5px] border transition-colors",

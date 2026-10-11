@@ -79,6 +79,16 @@ export type Member = {
 };
 
 /** One event stream feeds both a deal's Activity and the agency-wide audit log. */
+export type AuditModule = "Home" | "Pipeline" | "Clients" | "Applicants" | "Candidates" | "Follow-ups" | "Documents" | "Approvals" | "Team" | "Learnings" | "System";
+export type AuditRecord = {
+  module: AuditModule;
+  entityType: string;
+  entityId: string;
+  entityName: string;
+  operation: "created" | "updated" | "removed";
+  fields: { field: string; before: string | number | boolean | null; after: string | number | boolean | null }[];
+};
+
 export type AuditEvent = {
   id: string;
   /** Epoch ms. */
@@ -90,6 +100,9 @@ export type AuditEvent = {
   summary: string;
   kind: TimelineKind | "comment" | "approval" | "document" | "sourcing" | "team" | "system";
   dealId?: string;
+  module?: AuditModule;
+  records?: AuditRecord[];
+  reason?: string;
 };
 
 export type Comment = {
