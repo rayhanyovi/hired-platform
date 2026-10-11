@@ -12,6 +12,8 @@ type Rect = { top: number; left: number; width: number; height: number };
 const PAD = 8;
 const CARD_W = 340;
 const GAP = 14;
+/** Each page's tour runs by itself the first time that page is opened. */
+const seenKey = (name: string) => (name === "Home" ? "heyamara:home-tour-seen" : `heyamara:tour-seen:${name}`);
 
 /** Finds the on-screen element for a step. Hidden (preserved) routes are skipped. */
 function findTarget(name?: string): HTMLElement | null {
@@ -21,9 +23,33 @@ function findTarget(name?: string): HTMLElement | null {
 }
 
 export function TourOverlay() {
-  const { tourOpen, setTourOpen } = useDesk();
+  const { tourOpen, setTourOpen, homeEntranceReady } = useDesk();
   const pathname = usePathname();
   const tour = tourFor(pathname);
+  // Tours already offered this session, for when storage is blocked.
+  const offered = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (!tour || tourOpen || offered.current.has(tour.name)) return;
+    // Home's tour waits for its intro animation to finish.
+    if (pathname === "/" && !homeEntranceReady) return;
+
+    // Wait for the page's targets to mount before starting.
+    const timer = setTimeout(() => {
+      offered.current.add(tour.name);
+      try {
+        if (localStorage.getItem(seenKey(tour.name)) === "true") return;
+        localStorage.setItem(seenKey(tour.name), "true");
+      } catch {
+        // Storage may be blocked. Still show each tour once this session.
+      }
+      setTourOpen(true);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [tour, tourOpen, pathname, homeEntranceReady, setTourOpen]);
+
+  if (pathname === "/" && !homeEntranceReady) return null;
   if (!tourOpen || !tour) return null;
   return <TourRunner key={pathname} tour={tour} onClose={() => setTourOpen(false)} />;
 }

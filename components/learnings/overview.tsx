@@ -61,11 +61,11 @@ export function LearningsOverview() {
           )}
           <div className="min-w-0">
             <div className="text-[11px] tracking-[0.08em] text-fg-faint uppercase">Continue where you left off</div>
-            <h2 className="mt-2 font-serif text-[24px] leading-tight tracking-tight">{resume.lesson.title}</h2>
+            <h2 className="mt-2 font-semibold text-[21px] leading-tight tracking-[-0.02em]">{resume.lesson.title}</h2>
             <p className="mt-2 text-[13px] text-fg-muted">
               {resume.track.title} · {KIND_LABEL[resume.lesson.kind]} · {resume.lesson.minutes} min
             </p>
-            <span className="mt-5 inline-flex h-9 items-center gap-1.5 rounded-lg bg-fg px-3.5 text-[13px] font-medium text-ink transition-colors group-hover:bg-white">
+            <span className="mt-5 inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-medium text-primary-foreground transition-colors group-hover:bg-primary-hover">
               Resume <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
             </span>
           </div>
@@ -104,7 +104,7 @@ export function LearningsOverview() {
               <div className="mb-4 grid gap-x-6 gap-y-2 sm:grid-cols-[minmax(0,1fr)_160px] sm:items-end">
                 <div>
                   <div className="font-mono text-[11px] text-fg-faint">Track {track.number}</div>
-                  <h2 id={`track-${track.id}`} className="mt-1 font-serif text-[22px] leading-tight tracking-tight">
+                  <h2 id={`track-${track.id}`} className="mt-1 font-semibold text-[19px] leading-tight tracking-[-0.02em]">
                     {track.title}
                   </h2>
                   <p className="mt-1 max-w-[60ch] text-[13px] text-fg-muted">{track.description}</p>

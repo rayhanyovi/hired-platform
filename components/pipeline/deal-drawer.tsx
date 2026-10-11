@@ -63,7 +63,7 @@ function Drawer({ deal, onClose }: { deal: Deal; onClose: () => void }) {
             <div className="flex items-start gap-4">
               <Avatar name={deal.candidate.name} size="lg" />
               <div className="min-w-0">
-                <h2 className="font-serif text-[26px] leading-tight tracking-tight">{deal.candidate.name}</h2>
+                <h2 className="font-semibold text-[22px] leading-tight tracking-[-0.02em]">{deal.candidate.name}</h2>
                 <p className="mt-1 text-[13px] text-fg-muted">
                   {deal.candidate.title} at {deal.candidate.currentCompany}
                 </p>

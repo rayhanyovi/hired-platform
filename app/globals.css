@@ -1,32 +1,63 @@
 @import "tailwindcss";
 
 /*
-  Amara Desk — design tokens.
-  Rule of thumb: the UI is monochrome. Violet means "Amara is speaking" (AI).
-  Amber / frost only appear when a deal needs attention.
+  Amara design tokens, sampled from the live Amara dashboard and chat.
+  - Chrome (rail, top bar, chat backdrop) is the darkest layer; content sits one step up.
+  - Each funnel metric owns a colour (calls → placements), used for icons and leaderboard headers.
+  - White is the primary action. The pink → violet gradient (the logo) means "Amara is speaking".
+  - Amber / frost only appear when a deal needs attention.
 */
 @theme {
-  --color-ink: #181818;
-  --color-ink-sunken: #131313;
-  --color-surface: #1d1d1d;
-  --color-raised: #232323;
-  --color-hover: #2a2a2a;
+  --color-ink: #1c1c1c;
+  --color-ink-sunken: #141414;
+  --color-surface: #212121;
+  --color-raised: #282828;
+  --color-hover: #2e2e2e;
   --color-line: rgb(255 255 255 / 0.07);
-  --color-line-strong: rgb(255 255 255 / 0.12);
+  --color-line-strong: rgb(255 255 255 / 0.11);
 
   --color-fg: #ededed;
   --color-fg-muted: #a3a3a3;
   --color-fg-faint: #6e6e6e;
 
-  --color-amara-pink: #e07de6;
-  --color-amara-violet: #8b5cf6;
-  --color-amara-soft: #c4a5ff;
-  --color-amara-wash: rgb(139 92 246 / 0.09);
+  --color-brand: #ec7cf4;
+  --color-brand-hover: #f193f9;
+  --color-primary: #f2f2f2;
+  --color-primary-hover: #ffffff;
+  --color-primary-foreground: #171717;
+
+  --color-amara-pink: #eca1f6;
+  --color-amara-violet: #936fef;
+  --color-amara-soft: #c9a8ff;
+  --color-amara-wash: rgb(147 111 239 / 0.1);
+
+  --color-calls: #ec7172;
+  --color-calls-tile: #bc5854;
+  --color-submittals: #f1913d;
+  --color-submittals-tile: #c07428;
+  --color-interviews: #b684f4;
+  --color-interviews-tile: #9464c8;
+  --color-offers: #6ea1f0;
+  --color-offers-tile: #507cc8;
+  --color-placements: #5bcf9c;
+  --color-placements-tile: #44a878;
+
+  --color-good: #5bcf9c;
+  --color-good-wash: #203028;
+  --color-bad: #ec6c6c;
+  --color-bad-wash: #302424;
+
+  --color-paid: #66bf74;
+  --color-paid-row: #344430;
+  --color-paid-chip: #385838;
+  --color-sent: #5481e6;
+  --color-sent-row: #2c2c44;
+  --color-sent-chip: #303860;
+  --color-draft-row: #303030;
+  --color-draft-chip: #3c3c3c;
 
   --color-warm: #e3a857;
   --color-cold: #8ebcef;
-  --color-good: #9fd4a8;
-  --color-bad: #ee9a9a;
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-playfair), ui-serif, Georgia, serif;
@@ -71,7 +102,7 @@
   }
 
   ::selection {
-    background: rgb(139 92 246 / 0.35);
+    background: rgb(236 124 244 / 0.3);
   }
 
   :focus-visible {
@@ -104,8 +135,8 @@
   padding: 1px;
   background: linear-gradient(
     135deg,
-    rgb(224 125 230 / 0.55),
-    rgb(139 92 246 / 0.35) 40%,
+    rgb(236 161 246 / 0.55),
+    rgb(147 111 239 / 0.35) 40%,
     rgb(255 255 255 / 0.04) 75%
   );
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -115,15 +146,98 @@
   z-index: -1;
 }
 
+/*
+  The AI control: the fading gradient edge of .amara-edge (bright top-left,
+  dissolving toward the bottom-right) over a faint plum wash, so it reads as
+  Amara without shouting like the primary button.
+*/
+.amara-action {
+  position: relative;
+  isolation: isolate;
+  color: var(--color-fg);
+  font-weight: 500;
+  background:
+    linear-gradient(135deg, rgb(236 161 246 / 0.13), rgb(147 111 239 / 0.09) 45%, rgb(147 111 239 / 0.02) 80%),
+    var(--color-surface);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+.amara-action::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgb(236 161 246 / 0.7),
+    rgb(147 111 239 / 0.45) 40%,
+    rgb(255 255 255 / 0.05) 78%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: -1;
+  transition: opacity 150ms;
+}
+.amara-action:hover,
+.amara-action-active {
+  background:
+    linear-gradient(135deg, rgb(236 161 246 / 0.2), rgb(147 111 239 / 0.14) 45%, rgb(147 111 239 / 0.04) 80%),
+    var(--color-surface);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 4px 14px -6px rgb(147 111 239 / 0.35);
+}
+.amara-action:hover::before,
+.amara-action-active::before {
+  background: linear-gradient(
+    135deg,
+    rgb(236 161 246 / 0.95),
+    rgb(147 111 239 / 0.6) 45%,
+    rgb(255 255 255 / 0.08) 85%
+  );
+}
+
 /* The breathing orb from heyamara.com — used only while Amara is "thinking". */
 .amara-orb {
-  background: radial-gradient(circle at 35% 35%, #f3c8ff, #b06cf3 45%, #6d3fd9 75%);
-  box-shadow: 0 0 14px rgb(168 85 247 / 0.55);
+  background: radial-gradient(circle at 38% 34%, #f6ecff 0%, #ead3fb 22%, #b98af0 55%, #6b3fc9 85%);
+  box-shadow: 0 0 18px rgb(185 138 240 / 0.55);
   animation: orb 2.8s ease-in-out infinite;
 }
 @keyframes orb {
   0%, 100% { transform: scale(1); opacity: 0.9; }
   50% { transform: scale(1.12); opacity: 1; }
+}
+
+/* Home hero: a soft glow and a few stars, after heyamara.com's night sky. */
+.hero-sky {
+  background:
+    radial-gradient(48% 60% at 50% 22%, rgb(185 138 240 / 0.13), transparent 70%),
+    radial-gradient(30% 40% at 50% 30%, rgb(236 124 244 / 0.06), transparent 70%),
+    radial-gradient(1.2px 1.2px at 14% 24%, rgb(255 255 255 / 0.55), transparent),
+    radial-gradient(1px 1px at 22% 62%, rgb(255 255 255 / 0.35), transparent),
+    radial-gradient(1.4px 1.4px at 31% 14%, rgb(255 255 255 / 0.45), transparent),
+    radial-gradient(1px 1px at 38% 48%, rgb(255 255 255 / 0.25), transparent),
+    radial-gradient(1.2px 1.2px at 63% 18%, rgb(255 255 255 / 0.5), transparent),
+    radial-gradient(1px 1px at 71% 56%, rgb(255 255 255 / 0.3), transparent),
+    radial-gradient(1.4px 1.4px at 79% 30%, rgb(255 255 255 / 0.45), transparent),
+    radial-gradient(1px 1px at 86% 66%, rgb(255 255 255 / 0.3), transparent),
+    radial-gradient(1.2px 1.2px at 92% 16%, rgb(255 255 255 / 0.4), transparent),
+    radial-gradient(1px 1px at 7% 52%, rgb(255 255 255 / 0.3), transparent);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent);
+  animation: sky 9s ease-in-out infinite;
+}
+/* The same violet fog as Home and Chat, behind the top of every other page. */
+.page-fog {
+  background:
+    radial-gradient(60% 85% at 50% 8%, rgb(185 138 240 / 0.2), transparent 72%),
+    radial-gradient(32% 60% at 30% 10%, rgb(236 124 244 / 0.09), transparent 70%),
+    radial-gradient(32% 60% at 74% 6%, rgb(147 111 239 / 0.09), transparent 70%);
+  mask-image: linear-gradient(to bottom, #000 45%, transparent);
+  animation: sky 9s ease-in-out infinite;
+}
+@keyframes sky {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
 }
 
 .caret::after {

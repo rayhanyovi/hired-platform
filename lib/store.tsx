@@ -51,8 +51,20 @@ const uid = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(seq++).
 function useDeskState() {
   /* UI */
   const [toast, setToast] = useState<Toast | null>(null);
-  const [paletteOpen, setPaletteOpen] = useState(false);
+  /** The Ask HeyAmara drawer, and a question waiting to be sent into it. */
+  const [askOpen, setAskOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [pendingAsk, setPendingAsk] = useState<{ text: string; n: number } | null>(null);
+  const ask = useCallback((text: string) => {
+    setAskOpen(true);
+    setPendingAsk((p) => ({ text, n: (p?.n ?? 0) + 1 }));
+  }, []);
+  /** Home's demo state: a member who just joined, or an established desk. */
+  const [homeStage, setHomeStage] = useState<"day1" | "day30">("day30");
   const [tourOpen, setTourOpen] = useState(false);
+  /** Entrance replays after a reload, but not when returning through app navigation. */
+  const [homeEntranceReady, setHomeEntranceReady] = useState(false);
+  const [railOpen, setRailOpen] = useState(false);
   const [openDealId, openDeal] = useState<string | null>(null);
   const [selectedFollowUpId, selectFollowUp] = useState<string | null>(null);
   /** A request from elsewhere (e.g. a deal page) to open the generator for a deal. */
@@ -61,6 +73,7 @@ function useDeskState() {
   const [selectedApplicantId, selectApplicant] = useState<string | null>(null);
   const [selectedCandidateId, selectCandidate] = useState<string | null>(null);
   const [jobFilter, setJobFilter] = useState<string>("all");
+  const [teamView, setTeamView] = useState<"members" | "leaderboard">("members");
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   /* Data */
@@ -426,10 +439,20 @@ function useDeskState() {
     // ui
     toast,
     notify,
-    paletteOpen,
-    setPaletteOpen,
+    askOpen,
+    setAskOpen,
+    searchOpen,
+    setSearchOpen,
+    pendingAsk,
+    ask,
+    homeStage,
+    setHomeStage,
     tourOpen,
     setTourOpen,
+    homeEntranceReady,
+    setHomeEntranceReady,
+    railOpen,
+    setRailOpen,
     openDealId,
     openDeal,
     selectedFollowUpId,
@@ -442,6 +465,8 @@ function useDeskState() {
     selectCandidate,
     jobFilter,
     setJobFilter,
+    teamView,
+    setTeamView,
     // team
     me,
     isOwner,
@@ -492,7 +517,7 @@ function useDeskState() {
   };
 }
 
-type DeskState = ReturnType<typeof useDeskState>;
+export type DeskState = ReturnType<typeof useDeskState>;
 const DeskContext = createContext<DeskState | null>(null);
 
 export function DeskProvider({ children }: { children: React.ReactNode }) {

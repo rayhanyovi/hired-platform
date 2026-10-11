@@ -3,8 +3,7 @@
  * real model later means replacing these functions with streamed API calls.
  */
 import { RECRUITER } from "./data";
-import { fee, money, needsAttention, riskValue, STAGE_ODDS, temperatureOf } from "./deal";
-import type { Channel, Deal, FollowUp, Tone } from "./types";
+import type { Channel, FollowUp, Tone } from "./types";
 
 const BODIES: Record<FollowUp["kind"], Record<Tone, (f: FollowUp) => string>> = {
   rejection: {
@@ -76,92 +75,4 @@ export function subjectFor(f: FollowUp) {
     default:
       return "Keeping in touch";
   }
-}
-
-export function morningBrief(deals: Deal[], followUpsLeft: number) {
-  const laura = deals.find((d) => d.id === "laura-chen");
-  const marcus = deals.find((d) => d.id === "marcus-oyelaran");
-  const atRisk = deals.filter(needsAttention);
-  const atRiskFees = atRisk.reduce((sum, d) => sum + fee(d), 0);
-
-  const parts: string[] = [];
-  if (laura && temperatureOf(laura) !== "hot") {
-    parts.push(
-      `Laura Chen is the deal that matters today. Kestrel want to wait until Thursday, and she has two other finals closing by Wednesday. That's ${money(fee(laura))} in fees, and it needs a call to their CEO, not an email.`,
-    );
-  }
-  if (marcus && temperatureOf(marcus) !== "hot") {
-    parts.push(`Marcus is $10k apart on his offer and his manager wants a chat. A sign-on bonus closes it before the counter-offer lands.`);
-  }
-  if (atRisk.length) {
-    parts.push(`In total, ${atRisk.length} deals are cooling, with ${money(atRiskFees, { compact: true })} in fees at stake.`);
-  } else {
-    parts.push("Nothing in your pipeline is cooling. Good week to source.");
-  }
-  if (followUpsLeft) {
-    parts.push(`${followUpsLeft} candidates are waiting to hear from you. I've drafted every update, so they just need your eyes.`);
-  } else {
-    parts.push("Nobody is waiting on you. Zero ghosted candidates.");
-  }
-  return parts.join(" ");
-}
-
-export type AmaraAnswer = { text: string; links: { label: string; href: string; dealId?: string }[] };
-
-export const SUGGESTED_QUESTIONS = [
-  "What's going cold?",
-  "Prep me for the Kestrel call",
-  "Who's waiting on me?",
-  "How's my month tracking?",
-];
-
-export function askAmara(query: string, deals: Deal[], followUps: FollowUp[]): AmaraAnswer {
-  const q = query.toLowerCase();
-
-  if (/(cold|risk|cool|slip|stuck)/.test(q)) {
-    const atRisk = deals.filter(needsAttention).sort((a, b) => riskValue(b) - riskValue(a));
-    return {
-      text: atRisk.length
-        ? `${atRisk.length} deals are cooling:\n\n${atRisk
-            .map((d) => `• ${d.candidate.name} → ${d.role.client} · ${money(fee(d), { compact: true })}. ${d.signals[0]}.`)
-            .join("\n")}\n\nStart with ${atRisk[0].candidate.name}. Sorted by what's actually at risk: fee × how close to an offer × how cold.`
-        : "Nothing is cooling right now. Every live deal has been touched within its window.",
-      links: atRisk.slice(0, 3).map((d) => ({ label: d.candidate.name, href: "/pipeline", dealId: d.id })),
-    };
-  }
-
-  if (/(kestrel|laura|prep|call)/.test(q)) {
-    const laura = deals.find((d) => d.id === "laura-chen");
-    return {
-      text: laura ? laura.next.output : "Laura's deal has been closed out.",
-      links: [{ label: "Open Laura Chen", href: "/pipeline", dealId: "laura-chen" }],
-    };
-  }
-
-  if (/(wait|ghost|update|follow|owe)/.test(q)) {
-    const open = followUps;
-    return {
-      text: open.length
-        ? `${open.length} people are waiting on you. The longest wait is ${open[0].name}, ${open[0].daysWaiting} days.\n\n${open
-            .map((f) => `• ${f.name}: ${f.detail}`)
-            .join("\n")}\n\nEvery update is drafted. Most take one read and a send.`
-        : "Nobody is waiting on you. Inbox zero for candidates.",
-      links: [{ label: "Open follow-ups", href: "/follow-ups" }],
-    };
-  }
-
-  if (/(month|target|track|fees|money|billing)/.test(q)) {
-    const live = deals.filter((d) => d.stage !== "placed");
-    const weighted = live.reduce((s, d) => s + fee(d) * STAGE_ODDS[d.stage], 0);
-    const gap = RECRUITER.monthlyTarget - RECRUITER.placedThisMonth;
-    return {
-      text: `You've placed ${money(RECRUITER.placedThisMonth)} of your ${money(RECRUITER.monthlyTarget)} October target, so ${money(gap)} to go.\n\nWeighted by stage, your live pipeline is worth ${money(Math.round(weighted))}. Owen (contract out) and Laura (final) alone cover the gap. Laura is the one at risk.`,
-      links: [{ label: "See pipeline", href: "/pipeline" }],
-    };
-  }
-
-  return {
-    text: `In the real product I'd answer this from your desk: deals, emails, call notes, and client history.\n\nIn this demo, try asking what's going cold, who's waiting on you, or how your month is tracking.`,
-    links: [],
-  };
 }

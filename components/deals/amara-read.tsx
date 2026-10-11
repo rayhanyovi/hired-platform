@@ -5,7 +5,7 @@ import { Check, Copy, RotateCcw } from "lucide-react";
 import { useDesk } from "@/lib/store";
 import type { Deal } from "@/lib/types";
 import { AmaraByline, StreamText } from "../ai/stream";
-import { Button, cx } from "../ui/primitives";
+import { AmaraButton, Button, cx } from "../ui/primitives";
 
 /** Amara's take on a deal, plus the one next move it would make. */
 export function AmaraRead({ deal }: { deal: Deal }) {
@@ -37,10 +37,10 @@ export function AmaraRead({ deal }: { deal: Deal }) {
       <div className="mt-5 border-t border-line pt-4">
         <div className="mb-2.5 text-[11px] tracking-[0.06em] text-fg-faint uppercase">Next move</div>
         {draftRun === 0 ? (
-          <Button variant="amara" onClick={() => setDraftRun(1)} className="w-full">
+          <AmaraButton size="lg" onClick={() => setDraftRun(1)} className="w-full">
             <span className="flex-1 truncate text-left">{deal.next.label}</span>
-            <span className="text-[11px] font-normal text-white/70">{deal.next.kind === "call" ? "Prep notes" : "Draft it"}</span>
-          </Button>
+            <span className="text-[12px] text-fg-faint">{deal.next.kind === "call" ? "Prep notes" : "Draft it"}</span>
+          </AmaraButton>
         ) : (
           <div>
             <div className="mb-3 text-[13px] font-medium text-fg">{deal.next.label}</div>

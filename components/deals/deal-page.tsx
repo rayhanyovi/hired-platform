@@ -59,7 +59,7 @@ function DealDetail({ deal }: { deal: Deal }) {
         <div className="flex animate-rise items-start gap-4">
           <Avatar name={deal.candidate.name} size="lg" />
           <div className="min-w-0">
-            <h1 className="font-serif text-[32px] leading-[1.05] tracking-[-0.01em] sm:text-[38px]">{deal.candidate.name}</h1>
+            <h1 className="font-semibold text-[26px] leading-[1.05] tracking-[-0.02em] sm:text-[30px]">{deal.candidate.name}</h1>
             <p className="mt-2 text-[14px] text-fg-muted">
               {deal.role.title} at <span className="text-fg">{deal.role.client}</span>
             </p>

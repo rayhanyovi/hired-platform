@@ -7,7 +7,7 @@ import { STAGES } from "@/lib/data";
 import { fee, money, needsAttention, STAGE_ODDS } from "@/lib/deal";
 import { useDesk } from "@/lib/store";
 import type { Deal, Stage } from "@/lib/types";
-import { AmaraMark, Avatar, Heat, cx } from "../ui/primitives";
+import { AmaraTag, Avatar, Heat, cx } from "../ui/primitives";
 import { Page, PageHeader } from "../ui/page-header";
 
 type Filter = "all" | "attention";
@@ -44,14 +44,15 @@ export function Board() {
         eyebrow="Pipeline"
         title="Every deal, and how warm it is."
         actions={
-          <div className="flex items-end gap-6">
-            <div className="text-right">
-              <div className="text-[26px] font-medium leading-none tracking-[-0.02em] num">{money(Math.round(weighted), { compact: true })}</div>
-              <div className="mt-1.5 text-[11px] text-fg-faint">weighted fees in view</div>
+          <div className="flex items-center gap-4">
+            <div className="border-r border-line pr-4 text-right">
+              <div className="text-[10px] font-medium tracking-[0.06em] text-fg-muted uppercase">Weighted fees</div>
+              <div className="mt-1 text-[28px] font-semibold leading-none tracking-[-0.02em] num">{money(Math.round(weighted), { compact: true })}</div>
+              <div className="mt-1 text-[10px] text-fg-faint">In the current view</div>
             </div>
             <Link
               href="/candidates"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-fg px-3.5 text-[13px] font-medium text-ink transition-colors hover:bg-white"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover"
             >
               <Plus className="size-3.5" /> New deal
             </Link>
@@ -61,7 +62,7 @@ export function Board() {
         The bar under each deal drains as it sits untouched. It drains faster the closer a deal is to an offer.
       </PageHeader>
 
-      <div data-tour="pipeline-filters" className="mb-5 flex flex-wrap items-center gap-2">
+      <div data-tour="pipeline-filters" className="mb-5 flex flex-wrap items-center gap-2 border-b border-line pb-4">
         <div className="inline-flex rounded-lg border border-line bg-surface p-0.5" role="tablist" aria-label="Filter deals">
           {(
             [
@@ -121,15 +122,20 @@ export function Board() {
                 onDrop={() => drop(stage.id)}
                 className={cx(
                   "flex min-h-[420px] flex-col rounded-xl border p-2 transition-colors",
-                  overStage === stage.id ? "border-line-strong bg-surface" : "border-transparent bg-ink-sunken",
+                  overStage === stage.id ? "border-line-strong bg-surface" : "border-line bg-ink-sunken/60",
                 )}
               >
-                <header className="flex items-baseline justify-between px-2 pt-1.5 pb-3">
-                  <h2 className="cursor-help text-[12px] font-medium text-fg-muted" title={stage.description}>
-                    {stage.label}
-                    <span className="ml-1.5 font-mono text-[10px] text-fg-faint num">{cards.length}</span>
-                  </h2>
-                  <span className="font-mono text-[10px] text-fg-faint num">{total ? money(total, { compact: true }) : "—"}</span>
+                <header className="mb-3 border-b border-line px-2 pt-2 pb-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="cursor-help text-[13px] font-semibold text-fg" title={stage.description}>
+                      {stage.label}
+                    </h2>
+                    <span className="grid size-5 shrink-0 place-items-center rounded-md bg-raised font-mono text-[10px] text-fg-muted num" aria-label={`${cards.length} ${cards.length === 1 ? "deal" : "deals"}`}>{cards.length}</span>
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-fg-faint">
+                    <span className="font-mono text-[11px] text-fg-muted num">{total ? money(total, { compact: true }) : "—"}</span>
+                    <span>in fees</span>
+                  </div>
                 </header>
                 <ul className="flex flex-col gap-2">
                   {cards.map((d) => (
@@ -175,27 +181,30 @@ function DealCard({
       onDragEnd={onDragEnd}
       onClick={() => openDeal(deal.id)}
       className={cx(
-        "group w-full cursor-grab rounded-lg border bg-surface p-3 text-left transition-[border-color,background-color,opacity,transform] duration-150 hover:border-line-strong hover:bg-raised active:cursor-grabbing",
-        attention ? "border-line-strong" : "border-line",
+        "group relative w-full cursor-grab overflow-hidden rounded-lg border bg-surface p-3 text-left transition-[border-color,background-color,opacity,transform] duration-150 hover:border-line-strong hover:bg-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amara-soft active:cursor-grabbing",
+        attention ? "border-warm/30" : "border-line",
         dragging && "scale-[0.98] opacity-40",
       )}
     >
+      {attention && <span className="absolute inset-y-0 left-0 w-0.5 bg-warm/80" aria-hidden="true" />}
       <div className="flex items-start gap-2.5">
         <Avatar name={deal.candidate.name} size="sm" />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] leading-tight text-fg">{deal.candidate.name}</div>
-          <div className="mt-0.5 truncate text-[11px] text-fg-faint">{deal.role.client}</div>
+          <div className="line-clamp-2 text-[14px] font-semibold leading-tight text-fg">{deal.candidate.name}</div>
+          <div className="mt-1 truncate text-[11px] text-fg-muted">{deal.role.client}</div>
         </div>
       </div>
-      <div className="mt-2.5 truncate text-[12px] text-fg-muted">{deal.role.title}</div>
-      <div className="mt-3 flex items-center justify-between">
+      <div className="mt-3 line-clamp-2 min-h-[32px] text-[12px] leading-4 text-fg-muted">{deal.role.title}</div>
+      <div className="mt-2 flex items-center justify-between border-t border-line pt-2.5">
         <Heat deal={deal} />
-        <span className="text-[12px] text-fg num">{money(fee(deal), { compact: true })}</span>
+        <span className="text-[13px] font-medium text-fg num">{money(fee(deal), { compact: true })}</span>
       </div>
       {attention && (
-        <div className="mt-3 flex items-start gap-1.5 border-t border-line pt-2.5 text-[11px] leading-snug text-amara-soft/90">
-          <AmaraMark className="mt-[3px] h-2 w-2.5 shrink-0" />
-          <span className="line-clamp-2">{deal.next.label}</span>
+        <div className="mt-3">
+          <div className="mb-1.5 text-[9px] font-medium tracking-[0.05em] text-warm uppercase">Needs attention</div>
+          <AmaraTag wrap>
+            <span className="line-clamp-3">{deal.next.label}</span>
+          </AmaraTag>
         </div>
       )}
     </button>

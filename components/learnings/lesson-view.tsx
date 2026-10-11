@@ -47,7 +47,7 @@ export function LessonView({ id }: { id: string }) {
                 </span>
               )}
             </div>
-            <h1 className="mt-3 font-serif text-[32px] leading-[1.1] tracking-[-0.01em] sm:text-[40px]">{lesson.title}</h1>
+            <h1 className="mt-3 font-semibold text-[26px] leading-[1.1] tracking-[-0.02em] sm:text-[32px]">{lesson.title}</h1>
             <div className="mt-5 flex items-center gap-3">
               <Avatar name={lesson.mentor.name} size="sm" />
               <div className="text-[13px] leading-tight">
@@ -179,7 +179,7 @@ function Prose({ body = [], lead, className }: { body?: { heading?: string; text
       {lead && <p className="text-[18px] leading-relaxed text-fg">{lead}</p>}
       {body.map((block, i) => (
         <div key={i}>
-          {block.heading && <h2 className="mt-4 mb-3 font-serif text-[22px] leading-tight text-fg">{block.heading}</h2>}
+          {block.heading && <h2 className="mt-4 mb-3 font-semibold tracking-[-0.02em] text-[19px] leading-tight text-fg">{block.heading}</h2>}
           <p>{block.text}</p>
         </div>
       ))}

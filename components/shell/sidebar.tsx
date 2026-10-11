@@ -1,24 +1,26 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Bell,
   Building2,
-  Calculator,
   Check,
-  ChevronsUpDown,
   CircleHelp,
   Columns3,
   Ellipsis,
   FileText,
   GraduationCap,
   Inbox,
+  LayoutGrid,
+  Menu,
+  MessagesSquare,
   MessageSquareText,
+  PanelLeftClose,
   ScrollText,
   Search,
   ShieldCheck,
-  Sunrise,
   UsersRound,
   X,
 } from "lucide-react";
@@ -29,15 +31,21 @@ import { useDesk } from "@/lib/store";
 import { tourFor } from "@/lib/tours";
 import { ActorAvatar } from "../ui/member";
 import { AmaraMark, Kbd, cx } from "../ui/primitives";
+import { AskButton } from "./ask-drawer";
 
-type NavItem = { href: string; label: string; icon: typeof Sunrise; count?: number; attention?: boolean };
+type NavItem = { href: string; label: string; icon: typeof Menu; count?: number; attention?: boolean };
 
 export function useNav() {
   const { deals, followUps, applicants, approvals, isOwner } = useDesk();
   const toReview = applicants.filter((a) => a.status === "new").length;
   const pending = approvals.filter((a) => a.status === "pending").length;
   const groups: { label?: string; items: NavItem[] }[] = [
-    { items: [{ href: "/", label: "Today", icon: Sunrise }] },
+    {
+      items: [
+        { href: "/", label: "Home", icon: LayoutGrid },
+        { href: "/chat", label: "Chat", icon: MessagesSquare },
+      ],
+    },
     {
       label: "Recruit",
       items: [
@@ -52,7 +60,7 @@ export function useNav() {
       label: "Business",
       items: [
         { href: "/documents", label: "Documents", icon: FileText },
-        { href: "/sum", label: "The Sum", icon: Calculator },
+        // The Sum (/sum) is hidden from the menu for now; the route still works.
       ],
     },
     {
@@ -70,70 +78,127 @@ export function useNav() {
 const isActive = (pathname: string, href: string) =>
   href === "/" ? pathname === "/" : pathname.startsWith(href) || (href === "/pipeline" && pathname.startsWith("/deals"));
 
-function NavLink({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate?: () => void }) {
-  return (
-    <Link
-      href={item.href}
-      onClick={onNavigate}
-      aria-current={active ? "page" : undefined}
-      className={cx(
-        "group flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] transition-colors",
-        active ? "bg-raised text-fg" : "text-fg-muted hover:bg-surface hover:text-fg",
-      )}
-    >
-      <item.icon className={cx("size-4", active ? "text-fg" : "text-fg-faint group-hover:text-fg-muted")} strokeWidth={1.75} />
-      {item.label}
-      {!!item.count && <span className={cx("ml-auto font-mono text-[11px] num", item.attention ? "text-warm" : "text-fg-faint")}>{item.count}</span>}
-    </Link>
-  );
-}
+/* ── Rail ─────────────────────────────────────────────────────────── */
 
-export function Sidebar() {
+/** Amara's icon rail. ☰ in the top bar widens it to show labels. */
+export function Rail() {
   const pathname = usePathname();
   const groups = useNav();
-  const { setPaletteOpen } = useDesk();
+  const { railOpen, setSearchOpen } = useDesk();
 
   return (
-    <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col border-r border-line bg-ink-sunken px-3 py-4 md:flex">
-      <div className="flex items-center gap-2.5 px-2 pb-5">
-        <AmaraMark className="h-[18px] w-[21px]" />
-        <span className="font-serif text-[17px] tracking-tight">HeyAmara</span>
-        <span className="ml-auto rounded border border-line-strong px-1.5 py-px font-mono text-[10px] text-fg-faint">Desk</span>
-      </div>
+    <aside
+      className={cx(
+        "sticky top-0 z-30 hidden h-dvh shrink-0 flex-col border-r border-line bg-ink-sunken transition-[width] duration-200 ease-out md:flex",
+        railOpen ? "w-[220px]" : "w-[68px]",
+      )}
+    >
+      <Link href="/" className="flex h-16 shrink-0 items-center gap-2.5 px-[22px]" aria-label="Amara home">
+        <AmaraMark className="h-[20px] w-[24px] shrink-0" />
+        {railOpen && <span className="animate-fade text-[15px] font-semibold tracking-[-0.01em]">HeyAmara</span>}
+      </Link>
 
-      <button data-tour="ask-amara"
-        onClick={() => setPaletteOpen(true)}
-        className="group mb-3 flex h-9 shrink-0 items-center gap-2 rounded-lg border border-line bg-surface px-2.5 text-left text-[13px] text-fg-faint transition-colors hover:border-line-strong hover:text-fg-muted"
-      >
-        <Search className="size-3.5" />
-        Ask Amara
-        <span className="ml-auto flex gap-0.5">
-          <Kbd>⌘</Kbd>
-          <Kbd>K</Kbd>
-        </span>
-      </button>
-
-      <nav className="-mx-1 flex-1 space-y-4 overflow-y-auto px-1 pb-4" aria-label="Main">
+      <nav className="flex flex-1 flex-col gap-3 px-3 pt-3" aria-label="Main">
+        <RailButton label="Search" hint="⌘K" icon={Search} open={railOpen} onClick={() => setSearchOpen(true)} dataTour="search" />
         {groups.map((g, i) => (
-          <div key={g.label ?? i} className="flex flex-col gap-0.5">
-            {g.label && <div className="px-2 pb-1 text-[10px] tracking-[0.1em] text-fg-faint uppercase">{g.label}</div>}
+          <div key={g.label ?? i} className="flex flex-col gap-1">
+            {g.label &&
+              (railOpen ? (
+                <div className="px-2.5 pt-1 pb-0.5 text-[10px] tracking-[0.1em] text-fg-faint uppercase">{g.label}</div>
+              ) : (
+                <div className="mx-auto mb-1 h-px w-6 bg-line" aria-hidden="true" />
+              ))}
             {g.items.map((item) => (
-              <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
+              <RailLink key={item.href} item={item} active={isActive(pathname, item.href)} open={railOpen} />
             ))}
           </div>
         ))}
       </nav>
 
-      <HelpButton />
-      <AccountCard />
+      <div className="px-3 pb-4">
+        <HelpButton />
+      </div>
     </aside>
+  );
+}
+
+const tileClass = (active: boolean, open: boolean) =>
+  cx(
+    "group/rail relative flex h-11 shrink-0 items-center rounded-xl transition-colors",
+    open ? "gap-3 px-3" : "justify-center",
+    active ? "bg-raised text-fg" : "text-fg-muted hover:bg-surface hover:text-fg",
+  );
+
+function Tooltip({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      role="tooltip"
+      className="pointer-events-none absolute top-1/2 left-full z-50 ml-3 -translate-y-1/2 translate-x-1 rounded-md border border-line-strong bg-raised px-2 py-1 text-[12px] whitespace-nowrap text-fg opacity-0 shadow-[0_8px_24px_-8px_rgb(0_0_0/0.8)] transition-[opacity,transform] duration-150 group-hover/rail:translate-x-0 group-hover/rail:opacity-100 group-focus-visible/rail:translate-x-0 group-focus-visible/rail:opacity-100"
+    >
+      {children}
+    </span>
+  );
+}
+
+function RailLink({ item, active, open }: { item: NavItem; active: boolean; open: boolean }) {
+  return (
+    <Link href={item.href} aria-current={active ? "page" : undefined} aria-label={open ? undefined : item.label} className={tileClass(active, open)}>
+      <item.icon className="size-[19px] shrink-0" strokeWidth={1.75} />
+      {open && <span className="truncate text-[13px]">{item.label}</span>}
+      {!!item.count &&
+        (open ? (
+          <span className={cx("ml-auto font-mono text-[11px] num", item.attention ? "text-warm" : "text-fg-faint")}>{item.count}</span>
+        ) : (
+          <span className={cx("absolute top-2 right-2 size-1.5 rounded-full", item.attention ? "bg-warm" : "bg-fg-muted")} />
+        ))}
+      {!open && (
+        <Tooltip>
+          {item.label}
+          {!!item.count && <span className="ml-1.5 text-fg-faint num">{item.count}</span>}
+        </Tooltip>
+      )}
+    </Link>
+  );
+}
+
+function RailButton({
+  label,
+  hint,
+  icon: Icon,
+  open,
+  onClick,
+  dataTour,
+}: {
+  label: string;
+  hint?: string;
+  icon: typeof Menu;
+  open: boolean;
+  onClick: () => void;
+  dataTour?: string;
+}) {
+  return (
+    <button data-tour={dataTour} onClick={onClick} aria-label={open ? undefined : label} className={tileClass(false, open)}>
+      <Icon className="size-[19px] shrink-0" strokeWidth={1.75} />
+      {open && <span className="truncate text-[13px]">{label}</span>}
+      {open && hint && (
+        <span className="ml-auto">
+          <Kbd>{hint}</Kbd>
+        </span>
+      )}
+      {!open && (
+        <Tooltip>
+          {label}
+          {hint && <span className="ml-1.5 text-fg-faint">{hint}</span>}
+        </Tooltip>
+      )}
+    </button>
   );
 }
 
 /** Starts the tour for the current page. Also bound to "?" anywhere outside a text field. */
 function HelpButton() {
   const pathname = usePathname();
-  const { setTourOpen, tourOpen } = useDesk();
+  const { setTourOpen, tourOpen, railOpen } = useDesk();
   const tour = tourFor(pathname);
 
   useEffect(() => {
@@ -149,34 +214,143 @@ function HelpButton() {
   }, [tour, tourOpen, setTourOpen]);
 
   if (!tour) return null;
+  return <RailButton label="Tour this page" hint="?" icon={CircleHelp} open={railOpen} onClick={() => setTourOpen(true)} dataTour="page-tour" />;
+}
+
+/* ── Top bar ──────────────────────────────────────────────────────── */
+
+export function TopBar() {
+  const pathname = usePathname();
+  const groups = useNav();
+  const { railOpen, setRailOpen } = useDesk();
+  const current = groups.flatMap((g) => g.items).find((i) => isActive(pathname, i.href));
+
   return (
-    <button
-      onClick={() => setTourOpen(true)}
-      className="group mb-2 flex h-8 shrink-0 items-center gap-2.5 rounded-md px-2 text-left text-[13px] text-fg-muted transition-colors hover:bg-surface hover:text-fg"
-    >
-      <CircleHelp className="size-4 text-fg-faint group-hover:text-fg-muted" strokeWidth={1.75} />
-      Tour this page
-      <span className="ml-auto">
-        <Kbd>?</Kbd>
-      </span>
-    </button>
+    <header className="sticky top-0 z-20 hidden h-16 shrink-0 items-center gap-3 border-b border-line bg-ink-sunken/95 px-5 backdrop-blur md:flex">
+      <button
+        onClick={() => setRailOpen(!railOpen)}
+        aria-label={railOpen ? "Collapse navigation" : "Expand navigation"}
+        aria-expanded={railOpen}
+        className="grid size-9 place-items-center rounded-lg text-fg-muted transition-colors hover:bg-surface hover:text-fg"
+      >
+        {railOpen ? <PanelLeftClose className="size-[19px]" strokeWidth={1.75} /> : <Menu className="size-[19px]" strokeWidth={1.75} />}
+      </button>
+      {current && (
+        <div className="flex min-w-0 items-center gap-2.5">
+          <current.icon className="size-[18px] shrink-0 text-fg-muted" strokeWidth={1.75} />
+          <span className="truncate text-[17px] font-semibold tracking-[-0.01em]">{current.label}</span>
+        </div>
+      )}
+      <div className="ml-auto flex items-center gap-2">
+        <AskButton />
+        <Notifications />
+        <AccountMenu />
+      </div>
+    </header>
+  );
+}
+
+function usePopover() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  // Close if the page this lives on gets hidden by a navigation.
+  useLayoutEffect(() => () => setOpen(false), []);
+  return { open, setOpen, ref };
+}
+
+/** Everything waiting on you, in one bell. */
+function Notifications() {
+  const { approvals, applicants, followUps, deals, isOwner } = useDesk();
+  const { open, setOpen, ref } = usePopover();
+  const items = [
+    { n: isOwner ? approvals.filter((a) => a.status === "pending").length : 0, text: "waiting for your approval", href: "/team" },
+    { n: deals.filter(needsAttention).length, text: "deals going cold", href: "/pipeline" },
+    { n: followUps.length, text: "people waiting for an update", href: "/follow-ups" },
+    { n: applicants.filter((a) => a.status === "new").length, text: "applicants to review", href: "/applicants" },
+  ].filter((i) => i.n > 0);
+  const total = items.reduce((s, i) => s + i.n, 0);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        aria-label={`Notifications, ${total}`}
+        aria-expanded={open}
+        className="relative grid size-9 place-items-center rounded-lg text-fg-muted transition-colors hover:bg-surface hover:text-fg"
+      >
+        <Bell className="size-[19px]" strokeWidth={1.75} />
+        {total > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-calls px-1 text-[10px] font-semibold text-white num">
+            {total}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute top-full right-0 z-40 mt-2 w-72 animate-pop overflow-hidden rounded-xl border border-line-strong bg-surface shadow-[0_20px_50px_-15px_rgb(0_0_0/0.8)]">
+          <div className="border-b border-line px-4 py-2.5 text-[12px] text-fg-muted">Waiting on you</div>
+          {items.length === 0 ? (
+            <p className="px-4 py-6 text-center text-[13px] text-fg-faint">All clear.</p>
+          ) : (
+            items.map((i) => (
+              <Link key={i.href} href={i.href} onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-[13px] transition-colors hover:bg-raised">
+                <span className="w-6 text-right font-mono text-fg num">{i.n}</span>
+                <span className="text-fg-muted">{i.text}</span>
+              </Link>
+            ))
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
 /** Who you're signed in as. In the demo you can switch to see each role's view. */
-function AccountCard() {
+function AccountMenu() {
   const { me, members, setCurrentUser, notify } = useDesk();
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, ref } = usePopover();
   const progress = RECRUITER.placedThisMonth / RECRUITER.monthlyTarget;
 
-  // Close the menu if the sidebar is hidden (e.g. a navigation) while it's open.
-  useLayoutEffect(() => () => setOpen(false), []);
-
   return (
-    <div className="relative shrink-0">
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={`Account: ${me.name}`}
+        className="relative grid size-9 place-items-center rounded-lg transition-colors hover:bg-surface"
+      >
+        <ActorAvatar id={me.id} size="md" />
+        <span className="absolute right-0.5 bottom-0.5 size-2.5 rounded-full border-2 border-ink-sunken bg-placements" aria-hidden="true" />
+      </button>
       {open && (
-        <div className="absolute inset-x-0 bottom-full z-10 mb-2 animate-pop overflow-hidden rounded-xl border border-line-strong bg-surface shadow-[0_20px_50px_-15px_rgb(0_0_0/0.8)]" role="menu">
-          <div className="px-3 pt-2.5 pb-1.5 text-[10px] tracking-[0.1em] text-fg-faint uppercase">View as (demo)</div>
+        <div className="absolute top-full right-0 z-40 mt-2 w-64 animate-pop overflow-hidden rounded-xl border border-line-strong bg-surface shadow-[0_20px_50px_-15px_rgb(0_0_0/0.8)]" role="menu">
+          <div className="border-b border-line px-4 py-3">
+            <div className="text-[13px] text-fg">{me.name}</div>
+            <div className="text-[11px] text-fg-faint">
+              {ROLE_LABEL[me.role]} · {RECRUITER.desk}
+            </div>
+            <div className="mt-3 mb-1.5 flex justify-between font-mono text-[10px] text-fg-faint num">
+              <span>October</span>
+              <span>
+                <span className="text-fg-muted">{money(RECRUITER.placedThisMonth, { compact: true })}</span> / {money(RECRUITER.monthlyTarget, { compact: true })}
+              </span>
+            </div>
+            <div className="h-1 overflow-hidden rounded-full bg-line-strong">
+              <div className="h-full rounded-full bg-placements" style={{ width: `${progress * 100}%` }} />
+            </div>
+          </div>
+          <div className="px-4 pt-2.5 pb-1 text-[10px] tracking-[0.1em] text-fg-faint uppercase">View as (demo)</div>
           {members.map((m) => (
             <button
               key={m.id}
@@ -187,7 +361,7 @@ function AccountCard() {
                 setOpen(false);
                 if (m.id !== me.id) notify(`Now viewing as ${m.name} (${ROLE_LABEL[m.role]})`);
               }}
-              className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-raised"
+              className="flex w-full items-center gap-2.5 px-4 py-2 text-left transition-colors hover:bg-raised"
             >
               <ActorAvatar id={m.id} size="xs" />
               <span className="min-w-0 flex-1 leading-tight">
@@ -197,36 +371,31 @@ function AccountCard() {
               {m.id === me.id && <Check className="size-3.5 text-fg-muted" />}
             </button>
           ))}
+          <div className="h-2" />
         </div>
       )}
-      <div className="space-y-3 rounded-xl border border-line bg-surface p-3">
-        <button onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu" className="flex w-full items-center gap-2.5 text-left">
-          <ActorAvatar id={me.id} />
-          <span className="min-w-0 flex-1 leading-tight">
-            <span className="block truncate text-[13px]">{me.name}</span>
-            <span className="block truncate text-[11px] text-fg-faint">
-              {ROLE_LABEL[me.role]} · {RECRUITER.desk}
-            </span>
-          </span>
-          <ChevronsUpDown className="size-3.5 shrink-0 text-fg-faint" />
-        </button>
-        <div>
-          <div className="mb-1.5 flex justify-between font-mono text-[10px] text-fg-faint num">
-            <span>October</span>
-            <span>
-              <span className="text-fg-muted">{money(RECRUITER.placedThisMonth, { compact: true })}</span> / {money(RECRUITER.monthlyTarget, { compact: true })}
-            </span>
-          </div>
-          <div className="h-1 overflow-hidden rounded-full bg-line-strong">
-            <div className="h-full rounded-full bg-fg/80" style={{ width: `${progress * 100}%` }} />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
 
-const MOBILE_PRIMARY = ["/", "/clients", "/pipeline", "/follow-ups"];
+/* ── Mobile ───────────────────────────────────────────────────────── */
+
+function NavLink({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate?: () => void }) {
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={cx("flex h-10 items-center gap-3 rounded-xl px-3 text-[14px] transition-colors", active ? "bg-raised text-fg" : "text-fg-muted hover:bg-raised hover:text-fg")}
+    >
+      <item.icon className="size-[18px]" strokeWidth={1.75} />
+      {item.label}
+      {!!item.count && <span className={cx("ml-auto font-mono text-[11px] num", item.attention ? "text-warm" : "text-fg-faint")}>{item.count}</span>}
+    </Link>
+  );
+}
+
+const MOBILE_PRIMARY = ["/", "/chat", "/pipeline", "/follow-ups"];
 
 export function MobileNav() {
   const pathname = usePathname();
@@ -287,7 +456,7 @@ export function MobileNav() {
             <div className="space-y-4">
               {groups.map((g, i) => (
                 <div key={g.label ?? i} className="flex flex-col gap-0.5">
-                  {g.label && <div className="px-2 pb-1 text-[10px] tracking-[0.1em] text-fg-faint uppercase">{g.label}</div>}
+                  {g.label && <div className="px-3 pb-1 text-[10px] tracking-[0.1em] text-fg-faint uppercase">{g.label}</div>}
                   {g.items.map((item) => (
                     <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} onNavigate={() => setMoreOpen(false)} />
                   ))}
@@ -302,23 +471,24 @@ export function MobileNav() {
 }
 
 export function MobileHeader() {
-  const { setPaletteOpen, setTourOpen, me } = useDesk();
+  const { setTourOpen, setSearchOpen, me } = useDesk();
   const hasTour = !!tourFor(usePathname());
   return (
-    <header className="sticky top-0 z-20 flex h-12 items-center gap-2.5 border-b border-line bg-ink/90 px-4 backdrop-blur md:hidden">
-      <AmaraMark className="h-4 w-[19px]" />
-      <span className="font-serif text-[16px]">Amara</span>
+    <header className="sticky top-0 z-20 flex h-14 items-center gap-2.5 border-b border-line bg-ink-sunken/95 px-4 backdrop-blur md:hidden">
+      <AmaraMark className="h-[18px] w-[21px]" />
+      <span className="text-[15px] font-semibold tracking-[-0.01em]">HeyAmara</span>
       <span className="ml-auto">
         <ActorAvatar id={me.id} size="sm" />
       </span>
       {hasTour && (
-        <button onClick={() => setTourOpen(true)} aria-label="Tour this page" className="grid size-8 place-items-center rounded-lg border border-line bg-surface text-fg-muted">
+        <button data-tour="page-tour" onClick={() => setTourOpen(true)} aria-label="Tour this page" className="grid size-8 place-items-center rounded-lg border border-line bg-surface text-fg-muted">
           <CircleHelp className="size-4" />
         </button>
       )}
-      <button onClick={() => setPaletteOpen(true)} className="flex h-8 items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 text-xs text-fg-muted">
-        <Search className="size-3.5" /> Ask Amara
+      <button onClick={() => setSearchOpen(true)} aria-label="Search" className="grid size-8 place-items-center rounded-lg border border-line bg-surface text-fg-muted">
+        <Search className="size-4" />
       </button>
+      <AskButton compact />
     </header>
   );
 }

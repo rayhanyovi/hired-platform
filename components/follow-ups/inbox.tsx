@@ -9,7 +9,7 @@ import { useDesk } from "@/lib/store";
 import type { Channel, FollowUp, Tone } from "@/lib/types";
 import { AmaraByline, StreamText } from "../ai/stream";
 import { Page, PageHeader } from "../ui/page-header";
-import { Avatar, Button, Kbd, cx } from "../ui/primitives";
+import { AmaraButton, Avatar, Button, Kbd, cx } from "../ui/primitives";
 
 const TONES: { id: Tone; label: string }[] = [
   { id: "direct", label: "Direct" },
@@ -24,8 +24,10 @@ const CHANNELS: { id: Channel; label: string }[] = [
 ];
 
 export function Inbox() {
-  const { followUps, sentCount, selectedFollowUpId, selectFollowUp } = useDesk();
-  const selected = followUps.find((f) => f.id === selectedFollowUpId) ?? followUps[0];
+  const { followUps, sentCount, selectedFollowUpId, selectFollowUp } =
+    useDesk();
+  const selected =
+    followUps.find((f) => f.id === selectedFollowUpId) ?? followUps[0];
   const overdue = followUps.filter((f) => f.daysWaiting >= 3);
   const recent = followUps.filter((f) => f.daysWaiting < 3);
 
@@ -33,26 +35,49 @@ export function Inbox() {
   const pick = (id: string) => {
     selectFollowUp(id);
     if (window.matchMedia("(max-width: 1023px)").matches) {
-      requestAnimationFrame(() => document.getElementById("composer")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+      requestAnimationFrame(() =>
+        document
+          .getElementById("composer")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      );
     }
   };
 
   return (
     <Page wide>
       <PageHeader eyebrow="Follow-ups" title="Nobody gets ghosted.">
-        Candidates remember the recruiter who told them the truth. Amara drafts every update from your notes. You read it, tweak it,
-        and send it.
+        Candidates remember the recruiter who told them the truth. Amara drafts
+        every update from your notes. You read it, tweak it, and send it.
       </PageHeader>
 
       {!selected ? (
         <Cleared sent={sentCount} />
       ) : (
         <div className="grid overflow-hidden rounded-2xl border border-line bg-ink-sunken lg:grid-cols-[340px_minmax(0,1fr)]">
-          <nav data-tour="fu-list" aria-label="People waiting on you" className="border-b border-line lg:border-r lg:border-b-0">
-            <Group title="Overdue" hint="3+ days" items={overdue} selectedId={selected.id} onSelect={pick} />
-            <Group title="This week" items={recent} selectedId={selected.id} onSelect={pick} />
+          <nav
+            data-tour="fu-list"
+            aria-label="People waiting on you"
+            className="border-b border-line lg:border-r lg:border-b-0"
+          >
+            <Group
+              title="Overdue"
+              hint="3+ days"
+              items={overdue}
+              selectedId={selected.id}
+              onSelect={pick}
+            />
+            <Group
+              title="This week"
+              items={recent}
+              selectedId={selected.id}
+              onSelect={pick}
+            />
           </nav>
-          <Composer key={selected.id} followUp={selected} remaining={followUps.length} />
+          <Composer
+            key={selected.id}
+            followUp={selected}
+            remaining={followUps.length}
+          />
         </div>
       )}
     </Page>
@@ -97,13 +122,26 @@ function Group({
                 <Avatar name={f.name} size="sm" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className={cx("truncate text-[13px]", active ? "text-fg" : "text-fg-muted")}>{f.name}</span>
-                    <span className={cx("shrink-0 font-mono text-[10px] num", f.daysWaiting >= 3 ? "text-warm" : "text-fg-faint")}>
+                    <span
+                      className={cx(
+                        "truncate text-[13px]",
+                        active ? "text-fg" : "text-fg-muted",
+                      )}
+                    >
+                      {f.name}
+                    </span>
+                    <span
+                      className={cx(
+                        "shrink-0 font-mono text-[10px] num",
+                        f.daysWaiting >= 3 ? "text-warm" : "text-fg-faint",
+                      )}
+                    >
                       {f.daysWaiting}d
                     </span>
                   </div>
                   <div className="mt-0.5 truncate text-[11px] text-fg-faint">
-                    {FOLLOW_UP_LABEL[f.kind]} · {f.client === "—" ? f.role : f.client}
+                    {FOLLOW_UP_LABEL[f.kind]} ·{" "}
+                    {f.client === "—" ? f.role : f.client}
                   </div>
                 </div>
               </button>
@@ -115,25 +153,42 @@ function Group({
   );
 }
 
-function Composer({ followUp: f, remaining }: { followUp: FollowUp; remaining: number }) {
+function Composer({
+  followUp: f,
+  remaining,
+}: {
+  followUp: FollowUp;
+  remaining: number;
+}) {
   const { markSent, notify, selectFollowUp, openDeal } = useDesk();
-  const [tone, setTone] = useState<Tone>(f.kind === "rejection" ? "warm" : "direct");
-  const [channel, setChannel] = useState<Channel>(f.kind === "keep-warm" ? "linkedin" : "email");
+  const [tone, setTone] = useState<Tone>(
+    f.kind === "rejection" ? "warm" : "direct",
+  );
+  const [channel, setChannel] = useState<Channel>(
+    f.kind === "keep-warm" ? "linkedin" : "email",
+  );
+  // Nothing is generated until the recruiter asks: drafts cost a model call.
   const [run, setRun] = useState(0);
-  const [edited, setEdited] = useState<string | null>(null);
+  const [drafting, setDrafting] = useState(false);
+  const [body, setBody] = useState("");
 
   const draft = draftFollowUp(f, tone, channel);
-  const streaming = edited === null;
+  const canSend = !drafting && body.trim().length > 0;
 
   const send = () => {
+    if (!canSend) return;
     markSent(f.id);
     selectFollowUp(null);
-    notify(remaining > 1 ? `Sent to ${f.firstName}. ${remaining - 1} to go.` : `Sent to ${f.firstName}. Nobody's waiting on you.`);
+    notify(
+      remaining > 1
+        ? `Sent to ${f.firstName}. ${remaining - 1} to go.`
+        : `Sent to ${f.firstName}. Nobody's waiting on you.`,
+    );
   };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && edited !== null) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
         send();
       }
@@ -142,47 +197,92 @@ function Composer({ followUp: f, remaining }: { followUp: FollowUp; remaining: n
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const regenerate = (next: { tone?: Tone; channel?: Channel }) => {
-    if (next.tone) setTone(next.tone);
-    if (next.channel) setChannel(next.channel);
-    setEdited(null);
+  const draftWithAmara = () => {
+    setDrafting(true);
     setRun((n) => n + 1);
   };
 
   return (
-    <section id="composer" className="flex min-w-0 scroll-mt-14 flex-col bg-ink" aria-label={`Update for ${f.name}`}>
+    <section
+      id="composer"
+      className="flex min-w-0 scroll-mt-14 flex-col bg-ink"
+      aria-label={`Update for ${f.name}`}
+    >
       <header className="flex flex-wrap items-start gap-4 border-b border-line px-6 py-5">
         <Avatar name={f.name} size="lg" />
         <div className="min-w-0 flex-1">
-          <h2 className="font-serif text-[24px] leading-tight tracking-tight">{f.name}</h2>
+          <h2 className="font-semibold text-[21px] leading-tight tracking-[-0.02em]">
+            {f.name}
+          </h2>
           <p className="mt-1 text-[13px] text-fg-muted">
             {f.role}
             {f.client !== "—" && <> · {f.client}</>}
           </p>
         </div>
         <div className="flex items-center gap-1.5 rounded-md border border-line px-2 py-1 text-[11px] text-fg-muted">
-          <Clock className={cx("size-3", f.daysWaiting >= 3 ? "text-warm" : "text-fg-faint")} />
+          <Clock
+            className={cx(
+              "size-3",
+              f.daysWaiting >= 3 ? "text-warm" : "text-fg-faint",
+            )}
+          />
           Waiting {f.daysWaiting} days
         </div>
       </header>
 
       <div className="grid flex-1 gap-0 xl:grid-cols-[minmax(0,1fr)_260px]">
         <div className="min-w-0 px-6 py-5">
-          <div data-tour="fu-controls" className="mb-4 flex flex-wrap items-center gap-2">
-            <Segmented label="Tone" options={TONES} value={tone} onChange={(t) => regenerate({ tone: t })} />
-            <Segmented label="Channel" options={CHANNELS} value={channel} onChange={(c) => regenerate({ channel: c })} />
-            <button
-              onClick={() => regenerate({})}
-              className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12px] text-fg-faint transition-colors hover:bg-hover hover:text-fg"
+          <div
+            data-tour="fu-controls"
+            className="mb-4 flex flex-wrap items-center gap-2"
+          >
+            <Segmented
+              label="Tone"
+              options={TONES}
+              value={tone}
+              onChange={setTone}
+            />
+            <Segmented
+              label="Channel"
+              options={CHANNELS}
+              value={channel}
+              onChange={setChannel}
+            />
+            <AmaraButton
+              onClick={draftWithAmara}
+              disabled={drafting}
+              className="ml-auto"
             >
-              <RotateCcw className="size-3.5" /> Rewrite
-            </button>
+              {run === 0 ? (
+                "Draft with Amara"
+              ) : (
+                <>
+                  <RotateCcw className="size-3.5" /> Redraft
+                </>
+              )}
+            </AmaraButton>
           </div>
 
-          <div data-tour="fu-draft" className="amara-edge rounded-xl bg-surface">
-            <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
-              <AmaraByline>{streaming ? "Drafting" : "Draft · edit freely"}</AmaraByline>
-              {channel === "sms" && <span className="font-mono text-[10px] text-fg-faint num">{(edited ?? draft).length} chars</span>}
+          <div
+            data-tour="fu-draft"
+            className={cx(
+              "rounded-xl bg-surface",
+              run > 0 ? "amara-edge" : "border border-line",
+            )}
+          >
+            <div className="flex min-h-10 items-center justify-between border-b border-line px-4 py-2.5">
+              {run > 0 ? (
+                <AmaraByline>
+                  {drafting ? "Drafting" : "Amara's draft · edit freely"}
+                </AmaraByline>
+              ) : (
+                <span className="text-[12px] text-fg-faint">Your message</span>
+              )}
+              {channel === "sms" && (
+                <span className="font-mono text-[10px] text-fg-faint num">
+                  {body.length} chars
+                </span>
+              )}
             </div>
             {channel === "email" && (
               <div className="border-b border-line px-4 py-2.5 text-[13px]">
@@ -191,37 +291,63 @@ function Composer({ followUp: f, remaining }: { followUp: FollowUp; remaining: n
               </div>
             )}
             <div className="min-h-[240px] px-4 py-4 text-[14px] leading-[1.7]">
-              {streaming ? (
-                <StreamText key={`${run}-${tone}-${channel}`} text={draft} className="text-fg" delay={500} onDone={() => setEdited(draft)} />
+              {drafting ? (
+                <StreamText
+                  key={run}
+                  text={draft}
+                  className="text-fg"
+                  delay={500}
+                  onDone={() => {
+                    setBody(draft);
+                    setDrafting(false);
+                  }}
+                />
               ) : (
                 <textarea
-                  value={edited}
-                  onChange={(e) => setEdited(e.target.value)}
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
                   aria-label="Message"
-                  className="block min-h-[220px] w-full resize-none bg-transparent text-fg outline-none [field-sizing:content]"
+                  placeholder={`Write to ${f.firstName}, or pick a tone and let Amara draft it from your notes.`}
+                  className="block min-h-[220px] w-full resize-none bg-transparent text-fg outline-none [field-sizing:content] placeholder:text-fg-faint"
                 />
               )}
             </div>
           </div>
 
-          <div data-tour="fu-send" className="mt-4 flex flex-wrap items-center gap-3">
-            <Button variant="primary" onClick={send} disabled={streaming}>
-              <Send className="size-3.5" /> Send {CHANNELS.find((c) => c.id === channel)?.label}
+          <div
+            data-tour="fu-send"
+            className="mt-4 flex flex-wrap items-center gap-3"
+          >
+            <Button variant="primary" onClick={send} disabled={!canSend}>
+              <Send className="size-3.5" /> Send{" "}
+              {CHANNELS.find((c) => c.id === channel)?.label}
             </Button>
             <span className="hidden items-center gap-1 text-[11px] text-fg-faint sm:inline-flex">
               <Kbd>⌘</Kbd>
               <Kbd>↵</Kbd>
             </span>
-            <span className="ml-auto text-[11px] text-fg-faint">Amara drafts. You send. Nothing goes out without you.</span>
+            <span className="ml-auto text-[11px] text-fg-faint">
+              Amara drafts. You send. Nothing goes out without you.
+            </span>
           </div>
         </div>
 
-        <aside data-tour="fu-context" className="border-t border-line px-6 py-5 xl:border-t-0 xl:border-l">
-          <h3 className="mb-3 text-[11px] tracking-[0.08em] text-fg-faint uppercase">What Amara used</h3>
-          <p className="mb-3 text-[13px] leading-relaxed text-fg-muted">{f.detail}</p>
+        <aside
+          data-tour="fu-context"
+          className="border-t border-line px-6 py-5 xl:border-t-0 xl:border-l"
+        >
+          <h3 className="mb-3 text-[11px] tracking-[0.08em] text-fg-faint uppercase">
+            What Amara used
+          </h3>
+          <p className="mb-3 text-[13px] leading-relaxed text-fg-muted">
+            {f.detail}
+          </p>
           <ul className="space-y-2">
             {f.context.map((c) => (
-              <li key={c} className="flex gap-2 text-[12px] leading-relaxed text-fg-muted">
+              <li
+                key={c}
+                className="flex gap-2 text-[12px] leading-relaxed text-fg-muted"
+              >
                 <Check className="mt-[3px] size-3 shrink-0 text-amara-soft/80" />
                 {c}
               </li>
@@ -253,7 +379,11 @@ function Segmented<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="inline-flex rounded-lg border border-line bg-surface p-0.5" role="radiogroup" aria-label={label}>
+    <div
+      className="inline-flex rounded-lg border border-line bg-surface p-0.5"
+      role="radiogroup"
+      aria-label={label}
+    >
       {options.map((o) => (
         <button
           key={o.id}
@@ -262,7 +392,9 @@ function Segmented<T extends string>({
           onClick={() => value !== o.id && onChange(o.id)}
           className={cx(
             "h-7 rounded-md px-2.5 text-[12px] transition-colors",
-            value === o.id ? "bg-raised text-fg shadow-[0_0_0_1px_rgb(255_255_255/0.06)]" : "text-fg-faint hover:text-fg-muted",
+            value === o.id
+              ? "bg-raised text-fg shadow-[0_0_0_1px_rgb(255_255_255/0.06)]"
+              : "text-fg-faint hover:text-fg-muted",
           )}
         >
           {o.label}
@@ -276,11 +408,17 @@ function Cleared({ sent }: { sent: number }) {
   return (
     <div className="grid animate-rise place-items-center rounded-2xl border border-line bg-ink-sunken px-6 py-24 text-center">
       <div className="amara-orb mb-8 size-3 rounded-full" aria-hidden="true" />
-      <h2 className="font-serif text-[32px] leading-tight">Nobody is waiting on you.</h2>
+      <h2 className="font-serif text-[32px] leading-tight">
+        Nobody is waiting on you.
+      </h2>
       <p className="mt-3 max-w-[40ch] text-[14px] text-fg-muted">
-        {sent} honest updates sent today. That&apos;s {sent} people who&apos;ll take your call next time.
+        {sent} honest updates sent today. That&apos;s {sent} people who&apos;ll
+        take your call next time.
       </p>
-      <Link href="/" className="mt-8 inline-flex items-center gap-1.5 text-[13px] text-fg-muted hover:text-fg">
+      <Link
+        href="/"
+        className="mt-8 inline-flex items-center gap-1.5 text-[13px] text-fg-muted hover:text-fg"
+      >
         Back to Today <ArrowRight className="size-3.5" />
       </Link>
     </div>
