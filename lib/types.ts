@@ -79,7 +79,22 @@ export type Member = {
 };
 
 /** One event stream feeds both a deal's Activity and the agency-wide audit log. */
-export type AuditModule = "Home" | "Pipeline" | "Clients" | "Applicants" | "Candidates" | "Follow-ups" | "Documents" | "Approvals" | "Team" | "Learnings" | "System";
+export type AuditModule =
+  | "Home"
+  | "Pipeline"
+  | "Clients"
+  | "Prospects"
+  | "Applicants"
+  | "Candidates"
+  | "Follow-ups"
+  | "Communication"
+  | "Calendar"
+  | "Tasks"
+  | "Documents"
+  | "Approvals"
+  | "Team"
+  | "Learnings"
+  | "System";
 export type AuditRecord = {
   module: AuditModule;
   entityType: string;
@@ -100,6 +115,8 @@ export type AuditEvent = {
   summary: string;
   kind: TimelineKind | "comment" | "approval" | "document" | "sourcing" | "team" | "system";
   dealId?: string;
+  /** The client, prospect or candidate this is about, so record histories can read it. */
+  subjectId?: string;
   module?: AuditModule;
   records?: AuditRecord[];
   reason?: string;
@@ -139,6 +156,8 @@ export type DocKind = GeneratedDocKind | ReceivedDocKind;
 export type DocStatus = "draft" | "sent" | "signed" | "received" | "pending-approval" | "approved";
 
 export type AgencyDoc = {
+  candidateId?: string;
+  placementId?: string;
   id: string;
   kind: DocKind;
   direction: "generated" | "received";
@@ -164,6 +183,8 @@ export type JobChannel = "Seek" | "LinkedIn" | "Indeed" | "Website";
 export type Source = JobChannel | "Email" | "Referral";
 
 export type Job = {
+  /** Recruiter-recorded requirements; unknown briefs remain empty. */
+  requirements?: string[];
   id: string;
   title: string;
   client: string;
@@ -175,6 +196,11 @@ export type Job = {
   status: "open" | "paused" | "filled";
 };
 
+/** Where a prospect is in the sales conversation, from first touch to signed terms. */
+export type ProspectStage = "new" | "interested" | "follow-up" | "meeting" | "negotiation" | "terms-sent" | "terms-signed";
+
+export type Contact = { name: string; title: string; email: string; phone?: string };
+
 export type Client = {
   id: string;
   name: string;
@@ -182,11 +208,99 @@ export type Client = {
   location: string;
   /** Prospects are companies you're pitching; active clients have work with you. */
   status: "active" | "prospect";
-  contact: { name: string; title: string; email: string };
+  contact: Contact;
+  /** Everyone else you know there, beyond the main contact. */
+  contacts?: Contact[];
   feePct: number;
   since: number;
   /** Path under /public. Clients added in-session fall back to initials. */
   logo?: string;
+  /** Prospects only. */
+  stage?: ProspectStage;
+  size?: string;
+  website?: string;
+  ownerId?: string;
+  lastContactedAt?: number;
+};
+
+/* ── Tasks, notes, calendar, communication ─────────────────────────── */
+
+/** Anything a task, note or message can hang off. */
+export type SubjectKind = "client" | "prospect" | "candidate";
+export type Subject = { kind: SubjectKind; id: string; name: string };
+
+export type Task = {
+  id: string;
+  title: string;
+  /** Epoch ms. Undefined means no date. */
+  due?: number;
+  priority: 1 | 2 | 3;
+  done: boolean;
+  subject?: Subject;
+  ownerId: string;
+  createdAt: number;
+};
+
+export type Note = { id: string; subjectId: string; body: string; at: number; authorId: string };
+
+export type CalendarKind = "interview" | "meeting" | "call" | "follow-up" | "placement" | "event";
+
+export type CalendarEvent = {
+  id: string;
+  kind: CalendarKind;
+  title: string;
+  /** Epoch ms. */
+  start: number;
+  minutes: number;
+  /** Start dates and reminders that belong to a day, not a time. */
+  allDay?: boolean;
+  subject?: Subject;
+  dealId?: string;
+  /** Who's in it, besides you. */
+  with?: string[];
+  where?: string;
+  detail?: string;
+  ownerId: string;
+};
+
+export type MessageChannel = "email" | "sms" | "linkedin" | "whatsapp";
+
+export type Message = { id: string; from: "me" | "them"; body: string; at: number; byId?: string; amara?: boolean; /** Queued to go out then. Epoch ms. */ scheduledFor?: number };
+
+export type Thread = {
+  id: string;
+  channel: MessageChannel;
+  /** No subject means they aren't a candidate, client or prospect yet. Email and phone are what they wrote from. */
+  contact: { name: string; detail: string; subject?: Subject; email?: string; phone?: string };
+  subject?: string;
+  messages: Message[];
+  unread: boolean;
+  starred?: boolean;
+  important?: boolean;
+  /** Hidden from the inbox until then. Epoch ms. */
+  snoozedUntil?: number;
+  archived?: boolean;
+};
+
+/** Per-person inbox state in Communication. */
+export type ConversationFlags = { doneAt?: number; snoozedUntil?: number; pinned?: boolean; labels?: string[] };
+
+/** Your own way of grouping conversations. Labels can nest under another label. */
+export type LabelColor = "grey" | "red" | "orange" | "violet" | "blue" | "green";
+export type Label = { id: string; name: string; color: LabelColor; parentId?: string };
+
+/** A message waiting to be written in Communication, asked for from another page. */
+export type ComposeRequest = { channel: MessageChannel; contact: Thread["contact"]; subject?: string; body?: string };
+
+export type CallLog = {
+  id: string;
+  contact: { name: string; subject?: Subject };
+  direction: "outgoing" | "incoming";
+  outcome: "connected" | "no-answer" | "voicemail";
+  seconds: number;
+  at: number;
+  byId: string;
+  note?: string;
 };
 
 export type Fit = "strong" | "possible" | "unlikely";
@@ -219,7 +333,7 @@ export type Candidate = {
   jobId?: string;
   source: Source;
   at: number;
-  status: "pool" | "contacted" | "pipeline";
+  status: "pool" | "contacted" | "pipeline" | "declined";
   dealId?: string;
   fit?: Fit;
   matches?: string[];

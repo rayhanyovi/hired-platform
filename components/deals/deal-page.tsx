@@ -3,7 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, ChevronRight, FilePlus2, FileText, MapPin, Phone, Upload, Users } from "lucide-react";
+import {
+  Activity,
+  ArrowUpRight,
+  ChevronRight,
+  FilePlus2,
+  FileText,
+  Info,
+  MapPin,
+  Phone,
+  Upload,
+  Users,
+} from "lucide-react";
 import { STAGES } from "@/lib/data";
 import { fee, money } from "@/lib/deal";
 import { DOC_KIND_LABEL, DOC_STATUS_LABEL } from "@/lib/documents";
@@ -27,8 +38,8 @@ export function DealPage({ id }: { id: string }) {
         <div className="grid place-items-center rounded-2xl border border-line bg-ink-sunken px-6 py-24 text-center">
           <h1 className="font-serif text-[28px]">This deal isn&apos;t on your desk.</h1>
           <p className="mt-2 text-[14px] text-fg-muted">Deals added during a demo session reset when the page reloads.</p>
-          <Link href="/pipeline" className="mt-6 text-[13px] text-fg-muted underline-offset-4 hover:text-fg hover:underline">
-            Back to Pipeline
+          <Link href="/candidates" className="mt-6 text-[13px] text-fg-muted underline-offset-4 hover:text-fg hover:underline">
+            Back to Candidates
           </Link>
         </div>
       </Page>
@@ -48,8 +59,8 @@ function DealDetail({ deal }: { deal: Deal }) {
   return (
     <Page wide>
       <nav aria-label="Breadcrumb" className="mb-6 flex items-center gap-1.5 text-[12px] text-fg-faint">
-        <Link href="/pipeline" className="transition-colors hover:text-fg">
-          Pipeline
+        <Link href="/candidates" className="transition-colors hover:text-fg">
+          Candidates
         </Link>
         <ChevronRight className="size-3" />
         <span className="truncate">{deal.candidate.name}</span>
@@ -132,7 +143,7 @@ function DealDetail({ deal }: { deal: Deal }) {
 
         <aside data-tour="deal-aside" className="space-y-8">
           <section>
-            <SectionTitle>Details</SectionTitle>
+            <SectionTitle icon={Info}>Details</SectionTitle>
             <dl className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface text-[13px]">
               <Row label="Heat">
                 <Heat deal={deal} showLabel />
@@ -152,7 +163,7 @@ function DealDetail({ deal }: { deal: Deal }) {
           </section>
 
           <section>
-            <SectionTitle
+            <SectionTitle icon={FileText}
               aside={
                 <Link href="/documents" onClick={() => setDocDealId(deal.id)} className="text-[12px] text-fg-faint hover:text-fg">
                   All documents
@@ -195,7 +206,7 @@ function DealDetail({ deal }: { deal: Deal }) {
           </section>
 
           <section>
-            <SectionTitle
+            <SectionTitle icon={Activity}
               aside={
                 <Link href="/audit" className="inline-flex items-center gap-1 text-[12px] text-fg-faint hover:text-fg">
                   Audit trail <ArrowUpRight className="size-3" />

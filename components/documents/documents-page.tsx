@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowDownLeft, ArrowUpRight, FilePlus2, FileText, Search, Upload } from "lucide-react";
+import { FileInput, FileOutput, FilePlus2, FileText, Search, Upload } from "lucide-react";
 import { DOC_KIND_LABEL, DOC_STATUS_LABEL, docTitle, fileSize, GENERATED_KINDS, renderDoc } from "@/lib/documents";
 import { memberName, useDesk } from "@/lib/store";
 import { formatDate, NOW_MS } from "@/lib/time";
@@ -12,6 +12,10 @@ import { Page, PageHeader } from "../ui/page-header";
 import { Button, cx } from "../ui/primitives";
 import { DocPaper } from "./doc-paper";
 import { LogDocumentDialog } from "./log-dialog";
+import { TableWorkspace } from "../ui/table-workspace";
+import { MetricIconTile } from "../ui/metrics";
+import { SubpageTabs } from "../ui/subpage-tabs";
+import { Segmented } from "../ui/menu";
 
 type Tab = "register" | "generate";
 type Direction = "all" | "generated" | "received";
@@ -52,27 +56,16 @@ export function DocumentsPage() {
         logged here too.
       </PageHeader>
 
-      <div data-tour="doc-tabs" className="mb-6 inline-flex rounded-lg border border-line bg-surface p-0.5" role="tablist">
-        {(
-          [
-            ["register", "Register"],
-            ["generate", "Generate"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={tab === id}
-            disabled={id === "generate" && !canGenerate}
-            onClick={() => setTab(id)}
-            className={cx(
-              "h-7 rounded-md px-3.5 text-[12px] transition-colors disabled:opacity-40",
-              tab === id ? "bg-raised text-fg shadow-[0_0_0_1px_rgb(255_255_255/0.06)]" : "text-fg-muted hover:text-fg",
-            )}
-          >
-            {label}
-          </button>
-        ))}
+      <div data-tour="doc-tabs" className="mb-6">
+        <SubpageTabs
+          label="Documents view"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { id: "register", label: "Register", icon: FileText },
+            { id: "generate", label: "Generate", icon: FilePlus2, disabled: canGenerate ? undefined : "Resourcers can't generate documents" },
+          ]}
+        />
       </div>
 
       {tab === "register" ? <Register /> : <Generator dealId={dealId} setDealId={setDealId} onSaved={() => setTab("register")} />}
@@ -207,27 +200,18 @@ function Register() {
     .sort((a, b) => b.at - a.at);
 
   return (
-    <>
+    <TableWorkspace title="Documents">
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-lg border border-line bg-surface p-0.5" role="tablist" aria-label="Direction">
-          {(
-            [
-              ["all", "All"],
-              ["generated", "Sent by you"],
-              ["received", "From clients"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              role="tab"
-              aria-selected={direction === id}
-              onClick={() => setDirection(id)}
-              className={cx("h-7 rounded-md px-3 text-[12px] transition-colors", direction === id ? "bg-raised text-fg" : "text-fg-muted hover:text-fg")}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="Direction"
+          value={direction}
+          onChange={setDirection}
+          options={[
+            { id: "all", label: "All" },
+            { id: "generated", label: "Sent by you" },
+            { id: "received", label: "From clients" },
+          ]}
+        />
         <select value={client} onChange={(e) => setClient(e.target.value)} aria-label="Client" className={compactSelectClass}>
           <option value="all">All clients</option>
           {clients.map((c) => (
@@ -261,13 +245,11 @@ function Register() {
                 <tr key={d.id} className="transition-colors hover:bg-raised">
                   <td className="px-4 py-3">
                     <button onClick={() => setPreview(d)} className="flex items-center gap-3 text-left">
-                      <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-line-strong bg-ink-sunken">
-                        {d.direction === "received" ? (
-                          <ArrowDownLeft className="size-3.5 text-fg-muted" />
-                        ) : (
-                          <ArrowUpRight className="size-3.5 text-fg-muted" />
-                        )}
-                      </span>
+                      <MetricIconTile
+                        icon={d.direction === "received" ? FileInput : FileOutput}
+                        label={d.direction === "received" ? "Received document" : "Generated document"}
+                        tile={d.direction === "received" ? "bg-submittals-tile" : "bg-offers-tile"}
+                      />
                       <span className="min-w-0">
                         <span className="block truncate text-fg hover:underline hover:underline-offset-4">{DOC_KIND_LABEL[d.kind]}</span>
                         <span className="block truncate text-[11px] text-fg-faint">
@@ -306,7 +288,7 @@ function Register() {
       </div>
 
       {preview && <PreviewDialog doc={preview} onClose={() => setPreview(null)} />}
-    </>
+    </TableWorkspace>
   );
 }
 

@@ -1,8 +1,2 @@
-import type { Metadata } from "next";
-import { Board } from "@/components/pipeline/board";
-
-export const metadata: Metadata = { title: "Pipeline · Amara Desk" };
-
-export default function PipelinePage() {
-  return <Board />;
-}
+import { redirect } from "next/navigation";
+export default function PipelineRoute() { redirect("/placements"); }

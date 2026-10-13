@@ -24,14 +24,22 @@ export function Composer({
   disabled = false,
   docked = false,
   autoFocus = false,
+  prefill,
 }: {
+  /** Text put in the box from outside (e.g. a button's question), editable before sending. */
+  prefill?: { text: string; n: number } | null;
   placeholders: string[];
   onSend: (text: string) => void;
   disabled?: boolean;
   docked?: boolean;
   autoFocus?: boolean;
 }) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(prefill?.text ?? "");
+  const [seenPrefill, setSeenPrefill] = useState(prefill?.n ?? 0);
+  if (prefill && prefill.n !== seenPrefill) {
+    setSeenPrefill(prefill.n);
+    setValue(prefill.text);
+  }
   const [mode, setMode] = useState<Mode>("chat");
   const [files, setFiles] = useState<string[]>([]);
   const [menu, setMenu] = useState<"attach" | "mode" | null>(null);

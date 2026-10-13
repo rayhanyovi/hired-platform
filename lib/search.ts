@@ -8,9 +8,10 @@ import { FOLLOW_UP_LABEL, STAGES } from "./data";
 import { money, needsAttention, riskValue } from "./deal";
 import { DOC_KIND_LABEL, tobStatus } from "./documents";
 import { LESSONS } from "./learnings";
+import { prospectStage } from "./prospects";
 import type { DeskState } from "./store";
 
-export type ResultKind = "page" | "deal" | "client" | "role" | "candidate" | "applicant" | "followup" | "document" | "lesson" | "member";
+export type ResultKind = "page" | "deal" | "client" | "prospect" | "role" | "candidate" | "applicant" | "followup" | "message" | "task" | "document" | "lesson" | "member";
 
 export type Result = {
   id: string;
@@ -28,10 +29,13 @@ export const KIND_LABEL: Record<ResultKind, string> = {
   page: "Pages",
   deal: "Deals",
   client: "Clients",
+  prospect: "Prospects",
   role: "Roles",
   candidate: "Candidates",
   applicant: "Applicants",
-  followup: "Follow-ups",
+  followup: "Waiting on you",
+  message: "Messages",
+  task: "Tasks",
   document: "Documents",
   lesson: "Learnings",
   member: "Team",
@@ -40,11 +44,13 @@ export const KIND_LABEL: Record<ResultKind, string> = {
 const PAGES: [string, string, string][] = [
   ["Home", "/", "overview analytics metrics tasks invoices leaderboard"],
   ["Chat", "/chat", "amara conversation ask"],
-  ["Clients", "/clients", "companies prospects"],
-  ["Applicants", "/applicants", "applications screening sync"],
-  ["Candidates", "/candidates", "shortlist pool"],
-  ["Pipeline", "/pipeline", "deals board stages"],
-  ["Follow-ups", "/follow-ups", "updates ghosting rejections"],
+  ["Tasks", "/tasks", "todo to-do follow up reminders due overdue"],
+  ["Candidates", "/candidates", "talent pool profiles education skills experience database collections"],
+  ["Placements", "/placements", "pipeline applications recruitment submitted interviewing offers board companies opportunities"],
+  ["Calendar", "/calendar", "interviews meetings calls schedule events"],
+  ["Communication", "/communication", "inbox email sms linkedin whatsapp calls follow-ups updates ghosting rejections"],
+  ["Clients", "/clients", "companies accounts roles"],
+  ["Prospects", "/prospects", "sales pitching leads business development terms"],
   ["Documents", "/documents", "terms tob invoices contracts offer letters"],
   ["Team", "/team", "members roles approvals permissions"],
   ["Audit trail", "/audit", "events history export changes actors modules"],
@@ -66,14 +72,25 @@ export function buildIndex(d: DeskState): Result[] {
       }),
     ),
     ...d.clients.map(
-      (c): Result => ({
-        id: `client:${c.id}`,
-        kind: "client",
-        title: c.name,
-        subtitle: `${c.status === "active" ? "Active client" : "Prospect"} · ${c.industry} · ${c.location}`,
-        href: `/clients/${c.id}`,
-        keywords: `${c.contact.name} ${c.contact.title}`,
-      }),
+      (c): Result =>
+        c.status === "active"
+          ? {
+              id: `client:${c.id}`,
+              kind: "client",
+              title: c.name,
+              subtitle: `Active client · ${c.industry} · ${c.location}`,
+              href: `/clients/${c.id}`,
+              keywords: `${c.contact.name} ${c.contact.title}`,
+            }
+          : {
+              id: `client:${c.id}`,
+              kind: "prospect",
+              title: c.name,
+              subtitle: `Prospect · ${prospectStage(c.stage).label} · ${c.industry}`,
+              href: "/prospects",
+              keywords: `${c.contact.name} ${c.contact.title} ${c.location}`,
+              select: (s) => s.setFocusProspect(c.id),
+            },
     ),
     ...d.jobs.map(
       (j): Result => ({
@@ -85,45 +102,49 @@ export function buildIndex(d: DeskState): Result[] {
         keywords: j.location,
       }),
     ),
-    ...d.candidates.map(
-      (c): Result => ({
-        id: `candidate:${c.id}`,
-        kind: "candidate",
-        title: c.name,
-        subtitle: `${c.headline} · ${c.status === "pipeline" ? "In pipeline" : c.status === "contacted" ? "Contacted" : "Shortlisted"}`,
-        href: "/candidates",
-        keywords: c.location,
-        select: (s) => {
-          s.setJobFilter("all");
-          s.selectCandidate(c.id);
-        },
-      }),
-    ),
-    ...d.applicants.map(
-      (a): Result => ({
-        id: `applicant:${a.id}`,
-        kind: "applicant",
-        title: a.name,
-        subtitle: `${a.headline} · applied for ${d.jobs.find((j) => j.id === a.jobId)?.title ?? "a role"}`,
-        href: "/applicants",
-        keywords: `${a.location} ${a.source}`,
-        select: (s) => {
-          s.setJobFilter("all");
-          s.selectApplicant(a.id);
-        },
-      }),
-    ),
+    ...d.talent.map((person): Result => ({
+      id: `candidate:${person.key}`, kind: "candidate", title: person.name,
+      subtitle: `${person.headline} · Saved talent profile`, href: "/candidates",
+      keywords: `${d.getCandidateProfile(person).location} ${d.getCandidateProfile(person).skills.join(" ")}`,
+      select: (s) => s.setFocusPerson(person.key),
+    })),
     ...d.followUps.map(
       (f): Result => ({
         id: `followup:${f.id}`,
         kind: "followup",
         title: f.name,
         subtitle: `${FOLLOW_UP_LABEL[f.kind]} · waiting ${f.daysWaiting}d`,
-        href: "/follow-ups",
+        href: "/communication",
         keywords: `${f.role} ${f.client}`,
         select: (s) => s.selectFollowUp(f.id),
       }),
     ),
+    ...d.threads.map(
+      (t): Result => ({
+        id: `message:${t.id}`,
+        kind: "message",
+        title: t.subject ?? t.contact.name,
+        subtitle: `${t.contact.name} · ${t.channel === "sms" ? "SMS" : t.channel === "email" ? "Email" : t.channel === "linkedin" ? "LinkedIn" : "WhatsApp"}`,
+        href: "/communication",
+        keywords: `${t.contact.detail} ${t.messages.at(-1)?.body ?? ""}`,
+        select: (s) => s.selectThread(t.id),
+      }),
+    ),
+    ...d.tasks
+      .filter((t) => !t.done)
+      .map(
+        (t): Result => ({
+          id: `task:${t.id}`,
+          kind: "task",
+          title: t.title,
+          subtitle: t.subject ? `Task · ${t.subject.name}` : "Task",
+          href: t.subject?.kind === "client" ? `/clients/${t.subject.id}` : t.subject?.kind === "prospect" ? "/prospects" : t.subject ? "/candidates" : "/",
+          select: (s) => {
+            if (t.subject?.kind === "prospect") s.setFocusProspect(t.subject.id);
+            if (t.subject?.kind === "candidate") s.setFocusPerson(t.subject.id);
+          },
+        }),
+      ),
     ...d.documents.map(
       (x): Result => ({
         id: `document:${x.id}`,
@@ -187,6 +208,9 @@ export function lens(query: string, d: DeskState, index: Result[]): Lens | null 
   }
   if (/(unsigned|not signed|no tob|without terms)/.test(q)) {
     return { label: "Clients without signed terms", results: pick(d.clients.filter((c) => tobStatus(c.name, d.documents) !== "signed").map((c) => `client:${c.id}`)) };
+  }
+  if (/(quiet|no reply|follow up|chase)/.test(q)) {
+    return { label: "Prospects to chase", results: pick(d.clients.filter((c) => c.status === "prospect" && c.stage === "follow-up").map((c) => `client:${c.id}`)) };
   }
   if (/(approval|approve|pending)/.test(q)) {
     return { label: "Waiting for approval", results: pick(d.approvals.filter((a) => a.status === "pending").map((a) => `deal:${a.dealId}`)) };

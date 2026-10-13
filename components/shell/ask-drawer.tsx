@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Eye, SquarePen, X } from "lucide-react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
-import { askContext, askReply } from "@/lib/ask";
+import { askContext, askReply, promptOptions } from "@/lib/ask";
 import { useDesk } from "@/lib/store";
 import { Composer } from "../home/composer";
 import { AmaraMessage, UserMessage, type Message } from "../home/thread";
@@ -99,6 +99,7 @@ export function AskDrawer() {
 
   const send = (text: string) => {
     if (!text.trim() || busy) return;
+    setOffer(null);
     const context = withContext ? ctx : null;
     setMessages((m) => [
       ...m,
@@ -108,11 +109,13 @@ export function AskDrawer() {
     setBusy(true);
   };
 
-  // A page handed Amara a question (e.g. "Draft all 8" on Home): send it once.
+  // A button handed Amara a question: offer it with related ones, and put it in
+  // the box to edit. Nothing is sent until you pick one or press Send.
   const [handled, setHandled] = useState(0);
+  const [offer, setOffer] = useState<{ prompts: string[]; n: number } | null>(null);
   if (pendingAsk && pendingAsk.n !== handled) {
     setHandled(pendingAsk.n);
-    if (!busy) send(pendingAsk.text);
+    setOffer({ prompts: promptOptions(pendingAsk.text, ctx, pendingAsk.options), n: pendingAsk.n });
   }
 
   // Bring each new question to the top of the drawer once it's in the DOM.
@@ -214,10 +217,14 @@ export function AskDrawer() {
                     )}
                   </p>
                   <p className="mt-2 text-[13px] leading-relaxed text-fg-muted">
-                    {withContext ? "I can see the data on this page. Ask in your own words, or start here:" : "Ask about anything on your desk."}
+                    {offer
+                      ? "Pick a question to send, or edit it in the box below first."
+                      : withContext
+                        ? "I can see the data on this page. Ask in your own words, or start here:"
+                        : "Ask about anything on your desk."}
                   </p>
                   <div className="mt-5 flex flex-col items-start gap-2">
-                    {ctx.suggestions.map((s) => (
+                    {(offer?.prompts ?? ctx.suggestions).map((s) => (
                       <button
                         key={s}
                         onClick={() => send(s)}
@@ -239,6 +246,23 @@ export function AskDrawer() {
                       <AmaraMessage key={m.id} reply={m.reply} live={busy && i === messages.length - 1} onDone={() => setBusy(false)} onFollowUp={send} />
                     ),
                   )}
+                  {offer && (
+                    <div className="animate-rise rounded-xl border border-line bg-surface p-3">
+                      <p className="mb-2 text-[12px] text-fg-faint">Pick a question, or edit it below:</p>
+                      <div className="flex flex-col items-start gap-2">
+                        {offer.prompts.map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => send(s)}
+                            disabled={busy}
+                            className="rounded-full border border-line-strong px-3.5 py-1.5 text-left text-[13px] text-fg-muted transition-colors hover:border-white/20 hover:bg-raised hover:text-fg disabled:opacity-50"
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -250,6 +274,7 @@ export function AskDrawer() {
                 placeholders={[withContext ? `Ask about ${ctx.label}…` : "Ask Amara anything…"]}
                 onSend={send}
                 disabled={busy}
+                prefill={offer ? { text: offer.prompts[0], n: offer.n } : null}
               />
             </div>
           </motion.aside>

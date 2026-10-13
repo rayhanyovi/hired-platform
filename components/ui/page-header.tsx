@@ -34,9 +34,10 @@ export function PageHeader({
   );
 }
 
-export function Page({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
+/** Every page uses the full desk width, like Communication. `wide` is kept for older call sites. */
+export function Page({ children, className }: { children: React.ReactNode; wide?: boolean; className?: string }) {
   return (
-    <main className={`mx-auto w-full px-4 pt-6 pb-16 sm:px-8 sm:pt-8 ${wide ? "max-w-[1400px]" : "max-w-[1180px]"}`}>
+    <main className={cx("mx-auto w-full max-w-[1600px] px-4 pt-6 pb-16 sm:px-8 sm:pt-8", className)}>
       {children}
     </main>
   );

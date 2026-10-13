@@ -1,17 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { TableWorkspace } from "../ui/table-workspace";
 import Link from "next/link";
 import {
   ArrowUpRight,
   Check,
-  CircleAlert,
   ListChecks,
   Plus,
   Receipt,
-  SignalHigh,
-  SignalLow,
-  SignalMedium,
   Trophy,
 } from "lucide-react";
 import {
@@ -20,7 +17,6 @@ import {
   INVOICE_TOTAL,
   INVOICES,
   NETWORK_BOARD,
-  TASKS,
   TEAM_BOARD,
   type Invoice,
   type LeaderRow,
@@ -30,12 +26,18 @@ import { clientIdFor } from "@/lib/agency";
 import { useDesk } from "@/lib/store";
 import { initials } from "@/lib/deal";
 import {
+  ChangeLine,
   METRIC_ORDER,
   METRICS,
   MetricIcon,
+  StatCard,
+  StatRow,
   type MetricKind,
 } from "../ui/metrics";
 import { AmaraButton, AmaraTag, cx } from "../ui/primitives";
+import { isOverdue } from "@/lib/calendar";
+import { TaskList } from "../records/tasks";
+import { Segmented } from "../ui/menu";
 
 /* ── Shared ────────────────────────────────────────────────────────── */
 
@@ -152,91 +154,43 @@ export function MetricsRow({
   hidden,
   onAsk,
 }: {
-  values: Record<
-    MetricKind,
-    { value: number; target?: number; change: number }
-  >;
+  values: Record<MetricKind, { value: number; target?: number; change: number }>;
   stage: Stage;
   hidden: boolean;
   onAsk: (prompt: string) => void;
 }) {
   return (
-    <div
-      data-tour="home-metrics"
-      className="grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-line [gap:1px] sm:grid-cols-6 lg:grid-cols-5"
-    >
-      {METRIC_ORDER.map((k, i) => {
+    <StatRow dataTour="home-metrics">
+      {METRIC_ORDER.map((k) => {
         const v = values[k];
         const m = METRICS[k];
         return (
-          <div
+          <StatCard
             key={k}
-            className={cx(
-              "group flex flex-col bg-surface px-5 pt-4 pb-5 transition-colors hover:bg-raised/40 lg:col-span-1",
-              // 2 columns on phones, 3 + 2 on tablets, 5 across on desktop: no empty cells.
-              i < 3 ? "sm:col-span-2" : "sm:col-span-3",
-              i === 4 && "col-span-2",
-            )}
-          >
-            {/* 1. What it is: small and quiet. */}
-            <div className="flex h-7 items-center gap-2">
-              <MetricIcon kind={k} size="sm" className="size-6 rounded-md" />
-              <span className="text-[13px] text-fg-muted">{m.label}</span>
+            icon={m.icon}
+            tile={m.tile}
+            label={m.label}
+            faint={stage === "day1"}
+            value={hidden ? "•••" : v.value.toLocaleString("en-AU")}
+            sub={stage === "day1" ? "No activity yet" : <ChangeLine value={v.change} hidden={hidden} />}
+            action={
               <AmaraButton
                 size="sm"
-                onClick={() =>
-                  onAsk(
-                    stage === "day1"
-                      ? `What's a good weekly target for ${m.label.toLowerCase()}?`
-                      : `How are my ${m.label.toLowerCase()} tracking?`,
-                  )
-                }
+                onClick={() => onAsk(stage === "day1" ? `What's a good weekly target for ${m.label.toLowerCase()}?` : `How are my ${m.label.toLowerCase()} tracking?`)}
                 aria-label={`Ask Amara about ${m.label.toLowerCase()}`}
-                className="ml-auto px-2 transition-[opacity,background-color] lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
+                className="px-2"
               >
-                <span className="hidden xl:inline">Ask</span>
+                <span className="hidden 2xl:inline">Ask</span>
               </AmaraButton>
-            </div>
-            {/* 2. The number: the loudest thing in the card. */}
-            <Num
-              hidden={hidden}
-              className={cx(
-                "mt-3 text-[32px] leading-none font-semibold tracking-[-0.03em]",
-                stage === "day1" && "text-fg-faint",
-              )}
-            >
-              {v.value.toLocaleString("en-AU")}
-            </Num>
-            {/* 3. Context: one quiet line. */}
-            <span className="mt-2 text-[12px] text-fg-faint">
-              {stage === "day1" ? (
-                "No activity yet"
-              ) : hidden ? (
-                "•••"
-              ) : (
-                <>
-                  <span
-                    className={cx(
-                      "num",
-                      v.change >= 0 ? "text-good" : "text-bad",
-                    )}
-                  >
-                    {v.change >= 0 ? "▲" : "▼"} {Math.abs(v.change)}%
-                  </span>{" "}
-                  vs last period
-                </>
-              )}
-            </span>
-          </div>
+            }
+          />
         );
       })}
-    </div>
+    </StatRow>
   );
 }
 
 /* ── Tasks ─────────────────────────────────────────────────────────── */
-
-const PRIORITY_ICON = { 3: SignalHigh, 2: SignalMedium, 1: SignalLow } as const;
 
 export function TasksPanel({
   stage,
@@ -306,7 +260,20 @@ export function TasksPanel({
     );
   }
 
-  const open = TASKS.filter((t) => !done.includes(t.id));
+  return <DeskTasks onAsk={onAsk} />;
+}
+
+/**
+ * Every task on the desk, whatever it's about: clients, prospects and
+ * candidates. Each row links back to its record; follow-ups can be drafted.
+ */
+function DeskTasks({ onAsk }: { onAsk: (prompt: string) => void }) {
+  const { tasks, me } = useDesk();
+  const [adding, setAdding] = useState(false);
+  const [mine, setMine] = useState(false);
+  const scoped = tasks.filter((t) => !mine || t.ownerId === me.id);
+  const open = scoped.filter((t) => !t.done);
+  const overdue = open.filter((t) => isOverdue(t.due)).length;
   return (
     <Panel
       icon={ListChecks}
@@ -314,107 +281,34 @@ export function TasksPanel({
       count={open.length}
       dataTour="home-tasks"
       actions={
-        open.length > 0 && (
-          <AskButton
-            onClick={() => onAsk("Draft follow-ups for my 8 quiet clients")}
+        <>
+          {overdue > 0 && <span className="mr-1 text-[11px] text-bad num">{overdue} overdue</span>}
+          <button
+            onClick={() => setMine(!mine)}
+            aria-pressed={mine}
+            className={cx("h-7 rounded-md px-2 text-[11px] transition-colors", mine ? "bg-raised text-fg" : "text-fg-faint hover:text-fg")}
           >
-            Draft all {open.length}
-          </AskButton>
-        )
+            Mine
+          </button>
+          <button onClick={() => setAdding(true)} aria-label="Add a task" title="Add a task" className="grid size-7 place-items-center rounded-md text-fg-muted transition-colors hover:bg-hover hover:text-fg">
+            <Plus className="size-4" />
+          </button>
+          <AskButton onClick={() => onAsk("Draft follow-ups for my 8 quiet clients")}>Draft</AskButton>
+          <Link href="/tasks" className="ml-1 inline-flex h-7 items-center gap-1 rounded-md px-2 text-[12px] text-fg-muted transition-colors hover:bg-hover hover:text-fg">
+            All <ArrowUpRight className="size-3.5" />
+          </Link>
+        </>
       }
     >
-      {open.length === 0 ? (
-        <Empty
-          icon={ListChecks}
-          title="All caught up"
-          body="No follow-ups due. Amara will add tasks when a client goes quiet."
+      <div className="px-4 pt-2">
+        <TaskList
+          tasks={scoped}
+          showSubject
+          addOpen={adding}
+          onAddOpenChange={setAdding}
+          emptyText="All caught up. Add a task from here or from any client, prospect or candidate."
         />
-      ) : (
-        <ul className="divide-y divide-line">
-          {TASKS.map((t) => {
-            const isDone = done.includes(t.id);
-            const P = PRIORITY_ICON[t.priority];
-            return (
-              <li
-                key={t.id}
-                className={cx(
-                  "group flex items-start gap-3 px-4 py-3 transition-[opacity,background-color] hover:bg-raised/50",
-                  isDone && "opacity-40",
-                )}
-              >
-                <button
-                  role="checkbox"
-                  aria-checked={isDone}
-                  aria-label={`Done: follow up ${t.company}`}
-                  onClick={() =>
-                    setHomeTaskDone(t.id, `Follow up ${t.company}`, !isDone)
-                  }
-                  className={cx(
-                    "mt-px grid size-[18px] shrink-0 place-items-center rounded-[5px] border transition-colors",
-                    isDone
-                      ? "border-transparent bg-placements text-white"
-                      : "border-line-strong hover:border-fg/40",
-                  )}
-                >
-                  {isDone && <Check className="size-3" strokeWidth={3} />}
-                </button>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2">
-                    <span className="inline-grid h-5 min-w-5 shrink-0 place-items-center rounded border border-line-strong px-1 text-[10px] text-fg-muted">
-                      {t.initials}
-                    </span>
-                    <span
-                      className={cx(
-                        "truncate text-[13px] text-fg",
-                        isDone && "line-through",
-                      )}
-                    >
-                      {t.company}
-                    </span>
-                  </span>
-                  <span className="mt-0.5 flex items-center gap-1.5 text-[12px] text-fg-faint">
-                    <P
-                      className={cx(
-                        "size-3.5 shrink-0",
-                        t.priority === 3 ? "text-fg-muted" : "text-fg-faint",
-                      )}
-                      aria-label={`Priority ${t.priority}`}
-                    />
-                    <span className="truncate">Follow up · {t.detail}</span>
-                  </span>
-                </span>
-                {/* On desktop the age gives way to "Draft" on hover; on touch screens both show. */}
-                <span className="flex shrink-0 items-center gap-2 self-start lg:relative">
-                  <span
-                    className={cx(
-                      "inline-flex items-center gap-1 pt-0.5 text-[12px] text-bad transition-opacity",
-                      !isDone &&
-                        "lg:group-hover:opacity-0 lg:group-focus-within:opacity-0",
-                    )}
-                  >
-                    <CircleAlert className="size-3.5" /> {t.daysAgo}d ago
-                  </span>
-                  {!isDone && (
-                    <span className="transition-opacity lg:absolute lg:top-1/2 lg:right-0 lg:-translate-y-1/2 lg:opacity-0 lg:group-focus-within:opacity-100 lg:group-hover:opacity-100">
-                      <AmaraButton
-                        size="sm"
-                        onClick={() =>
-                          onAsk(`Draft a follow-up to ${t.company}`)
-                        }
-                        aria-label={`Draft a follow-up to ${t.company}`}
-                        title={`Draft a follow-up to ${t.company}`}
-                        className="px-2 lg:px-2.5"
-                      >
-                        <span className="hidden lg:inline">Draft</span>
-                      </AmaraButton>
-                    </span>
-                  )}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      </div>
     </Panel>
   );
 }
@@ -618,28 +512,15 @@ export function LeaderboardPanel({
           >
             See all
           </Link>
-          <div
-            className="inline-flex rounded-lg border border-line bg-ink-sunken p-0.5"
-            role="tablist"
-            aria-label="Leaderboard"
-          >
-            {(["team", "network"] as const).map((b) => (
-              <button
-                key={b}
-                role="tab"
-                aria-selected={board === b}
-                onClick={() => setBoard(b)}
-                className={cx(
-                  "h-6 rounded-md px-2.5 text-[12px] capitalize transition-colors",
-                  board === b
-                    ? "bg-raised text-fg"
-                    : "text-fg-faint hover:text-fg-muted",
-                )}
-              >
-                {b}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            label="Leaderboard"
+            value={board}
+            onChange={setBoard}
+            options={[
+              { id: "team", label: "Team" },
+              { id: "network", label: "Network" },
+            ]}
+          />
         </>
       }
     >
@@ -657,7 +538,7 @@ export function LeaderboardPanel({
           </button>
         </Empty>
       ) : (
-        <table className="w-full text-[13px]">
+        <TableWorkspace title="Leaderboard"><table className="w-full text-[13px]">
           <thead className="sticky top-0 z-10 bg-surface">
             <tr className="border-b border-line">
               <th className="w-8 py-2.5 pl-4 text-left text-[11px] font-normal text-fg-faint">
@@ -705,7 +586,7 @@ export function LeaderboardPanel({
               </tr>
             )}
           </tbody>
-        </table>
+        </table></TableWorkspace>
       )}
     </Panel>
   );

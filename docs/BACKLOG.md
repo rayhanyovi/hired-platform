@@ -18,15 +18,36 @@
 | B-002 | Deploy the demo | ⬜ | Vercel. **Ask Rayhan first**, the URL becomes public |
 | B-003 | Share source code | ⬜ | Repo access or zip; mention the hidden `/sum` |
 | B-004 | Click-through QA at 1440px and 375px | ⬜ | Home Day 1 / Day 30, drawer from each page, ⌘K, Follow-ups draft, Applicants original, Team leaderboard, client invoices |
-| B-005 | Rename Home Tasks companies to real desk clients/prospects | ⬜ | Still dummy (Eclipse Solutions, Citadel Group…); invoices were already fixed |
+| B-005 | Rename Home Tasks companies to real desk clients/prospects | ✅ | Done 13 Oct: quiet clients are real prospects/clients; Home Tasks reads the shared task store |
 | B-008 | Close the centred-input Home submission gap | ⬜ | Provide a compliant Home variant, or record explicit clarification from Gabriel. `/chat` alone does not satisfy PRD DC-1 |
 | B-029 | Discovery acceptance and evidence review | ⬜ | PRD §16.1 / TECH_PLAN §5.3: first step, priorities, information inventory, context-to-chat/return, editable drafts, simulation disclosure. Record actual observations |
+
+### Candidates review: 13 October
+
+| Item | Status | Notes |
+|---|---|---|
+| Recruiter profile, inline role/location/pay, quiet status row colors | ✅ | Default Profile tab; complete manual fields; source document modals |
+| Collections replacing duplicate candidate sheets | ✅ | Multiple memberships, owner/status/role/search filters; session-only |
+| All nine required pipeline forms | ✅ | Moved to independent Placements; schedule/client/role validation, local Calendar and document metadata; see PLACEMENTS.md |
+| Offer Sent extraction and subsequent staging wizard parity | ⬜ | First upload step inspected; later steps implemented as disclosed manual review, not verified staging parity |
+| Live AI parsing/enrichment, document storage and outbound scheduling/submission | ⬜ | On-request demo drafts/checklists currently; backend not connected |
+
+### Talent database and Placements separation: 13 October
+
+| Item | Status | Notes |
+|---|---|---|
+| Data-only Candidates with shared Clients-style table header | ✅ | No pipeline status/board/application queue; native expandable rows |
+| Independent candidate–company–role placements | ✅ | Multi-role creation, duplicate protection, closed-attempt reuse, own forms/history |
+| Placement list and kanban-to-form interaction | ✅ | Expand list rows; board cards open required workflow form |
+| Candidate/process history and local persistence | ✅ | Explicit-ID audit joins, all saved forms retained, versioned local browser storage |
+| AI across talent, role suggestions, process drafts and form review | ✅ | On-request source-grounded demo suggestions; human commits changes |
+| Shared backend, multi-user persistence and live AI | ⬜ | Local storage is a prototype; no outbound integrations |
 
 ### P1: Demo polish
 
 | ID | Item | Status | Notes |
 |---|---|---|---|
-| B-006 | Tasks → Follow-ups | 🟡 | No separate Tasks page. Follow-ups gets a Clients filter for quiet clients; Home Tasks rows link there; "See all" → Follow-ups. Waiting on Rayhan |
+| B-006 | Tasks → Follow-ups | ✅ | Resolved 13 Oct differently: tasks hang off any client, prospect or candidate; Follow-ups became Communication's "Waiting on you" |
 | B-007 | Clients list: outstanding invoices column | ⬜ | |
 | B-009 | Persist demo state to `localStorage` | ⬜ | Reload resets everything today |
 | B-010 | Follow-ups: editable subject line | ⬜ | |
@@ -35,6 +56,10 @@
 | B-013 | Tour copy review after S2 changes | ⬜ | New steps for team views, applicant views, client invoices |
 | B-014 | Unit + E2E tests | ⬜ | Vitest for `lib/`, Playwright for the five core loops (TECH_PLAN §5.2) |
 | B-015 | Real "Recent" conversations on `/chat` | ⬜ | Sidebar is a placeholder |
+| B-032 | Persist tasks, notes, threads and calendar events with the rest of desk state | ⬜ | Same as B-009; all new collections are in-memory |
+| B-033 | Board drag-and-drop browser test (Candidates, Prospects) | ⬜ | Logic shares `setPersonStatus` / `setProspectStage` with the menus, which were tested |
+| B-034 | Calendar: open on Day view on phones | ⬜ | Week view scrolls sideways inside its card at 375px |
+| B-035 | Persist labels and conversation flags; real contact matching for new people | ⬜ | Labels, pins and snoozes are in-memory. New people are matched by signature seeds and email domain only |
 | B-030 | Context lifecycle and draft preservation | ⬜ | Proposed TECH_PLAN §10.2 contract: selected-record/range/scope context, removal, return, cancellation, stale-response handling and retry |
 | B-031 | Explainable attention and scoped data definitions | ⬜ | Proposed TECH_PLAN §10.3–10.4: comparison denominator, reason/owner/next action, invoice status/due-date rules; label demo risk heuristics |
 

@@ -11,14 +11,14 @@ import { Field, inputClass, Modal } from "../ui/modal";
 import { Button, cx } from "../ui/primitives";
 
 /** The client's mark on a light tile, so dark and colourful logos read equally well. */
-export function ClientLogo({ client, size = "md" }: { client: Pick<Client, "name" | "logo">; size?: "md" | "lg" }) {
-  const box = size === "lg" ? "size-14 rounded-xl p-2.5" : "size-11 rounded-lg p-2";
+export function ClientLogo({ client, size = "md" }: { client: Pick<Client, "name" | "logo">; size?: "sm" | "md" | "lg" }) {
+  const box = size === "lg" ? "size-14 rounded-xl p-2.5" : size === "sm" ? "size-8 rounded-md p-1.5" : "size-11 rounded-lg p-2";
   return (
     <span className={cx("grid shrink-0 place-items-center bg-[#f4f3ef] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.06)]", box)}>
       {client.logo ? (
         <Image src={client.logo} alt="" width={40} height={40} unoptimized className="size-full object-contain" />
       ) : (
-        <span className={cx("font-medium text-[#2a2a2a]", size === "lg" ? "text-[15px]" : "text-[13px]")} aria-hidden="true">
+        <span className={cx("font-medium text-[#2a2a2a]", size === "lg" ? "text-[15px]" : size === "sm" ? "text-[11px]" : "text-[13px]")} aria-hidden="true">
           {initials(client.name)}
         </span>
       )}
@@ -102,13 +102,13 @@ export function channelsLabel(channels: JobChannel[]) {
   return channels.length ? `Advertised on ${channels.join(", ")}` : "Headhunt, not advertised";
 }
 
-export function AddClientDialog({ onClose, onAdded }: { onClose: () => void; onAdded: (id: string) => void }) {
+export function AddClientDialog({ onClose, onAdded, kind = "prospect" }: { onClose: () => void; onAdded: (id: string) => void; kind?: Client["status"] }) {
   const { addClient, notify } = useDesk();
   const [form, setForm] = useState({
     name: "",
     industry: "",
     location: "Sydney",
-    status: "prospect" as Client["status"],
+    status: kind,
     contactName: "",
     contactTitle: "",
     contactEmail: "",
@@ -132,8 +132,8 @@ export function AddClientDialog({ onClose, onAdded }: { onClose: () => void; onA
 
   return (
     <Modal
-      title="Add a client"
-      description="A company you're hiring for, or one you're pitching."
+      title={kind === "active" ? "Add a client" : "Add a prospect"}
+      description={kind === "active" ? "A company you're already hiring for." : "A company you're pitching. It starts at New on Prospects."}
       onClose={onClose}
       footer={
         <>
@@ -141,7 +141,7 @@ export function AddClientDialog({ onClose, onAdded }: { onClose: () => void; onA
             Cancel
           </Button>
           <Button variant="primary" onClick={save} disabled={!form.name.trim()}>
-            Add client
+            {form.status === "active" ? "Add client" : "Add prospect"}
           </Button>
         </>
       }

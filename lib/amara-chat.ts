@@ -98,7 +98,7 @@ export function amaraReply(prompt: string, stage: Stage): Reply {
 
   if (has(q, "worth the most")) {
     return {
-      text: "Eclipse Solutions and Citadel Group. Both have senior roles open with fees around A$40k each, and both replied quickly before going quiet, which usually means an internal delay rather than lost interest. Start there.",
+      text: "Fernhill Foods and Opal Insurance. Both are large employers planning 2027 hiring, and both replied quickly at first before going quiet, which usually means an internal delay rather than lost interest. Start there.",
       blocks: [],
       followups: ["Draft follow-ups for my 8 quiet clients"],
     };
@@ -198,7 +198,7 @@ export function amaraReply(prompt: string, stage: Stage): Reply {
               company: oneClient.company,
               initials: oneClient.initials,
               subject: `Still keen to help ${oneClient.company} hire?`,
-              body: `Hi there, it's been a few weeks since my last note and I didn't want it to get buried. I've got two candidates who fit the brief well. Worth a 15-minute call this week? If timing's changed, just tell me and I'll stop chasing.`,
+              body: `Hi there, it's been ${oneClient.daysAgo} days since my last note and I didn't want it to get buried. I've got two candidates who fit the brief well. Worth a 15-minute call this week? If timing's changed, just tell me and I'll stop chasing.`,
             },
           ],
         },
@@ -207,15 +207,15 @@ export function amaraReply(prompt: string, stage: Stage): Reply {
     };
   }
 
-  if (has(q, "follow", "quiet", "eclipse", "no reply", "tasks", "chase client")) {
+  if (has(q, "follow", "quiet", "fernhill", "no reply", "tasks", "chase client")) {
     const drafts = TASKS.slice(0, 3).map((t) => ({
       company: t.company,
       initials: t.initials,
       subject: `Still keen to help ${t.company} hire?`,
-      body: `Hi there, it's been a few weeks since my last note and I didn't want it to get buried. I've got two candidates who fit the brief well. Worth a 15-minute call this week? If timing's changed, just tell me and I'll stop chasing.`,
+      body: `Hi there, it's been ${t.daysAgo} days since my last note and I didn't want it to get buried. I've got two candidates who fit the brief well. Worth a 15-minute call this week? If timing's changed, just tell me and I'll stop chasing.`,
     }));
     return {
-      text: `${TASKS.length} clients haven't replied in 28 days. Here are drafts for the first three, each short enough to answer from a phone. I'll write the other five the same way once you're happy with the tone.`,
+      text: `${TASKS.length} clients and prospects have gone quiet, some for over a week. Here are drafts for the first three, each short enough to answer from a phone. I'll write the other five the same way once you're happy with the tone.`,
       blocks: [{ type: "drafts", items: drafts, more: TASKS.length - drafts.length }],
       followups: ["Make them warmer", "Draft the other five", "Which of these clients is worth the most?"],
     };

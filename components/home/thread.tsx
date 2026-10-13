@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { TableWorkspace } from "../ui/table-workspace";
 import Link from "next/link";
 import { ArrowUpRight, Check, Mail, MapPin, Send, UserPlus } from "lucide-react";
 import { motion } from "motion/react";
@@ -197,7 +198,7 @@ function Drafts({ items, more, onFollowUp }: { items: Extract<Block, { type: "dr
 function Invoices({ items }: { items: Extract<Block, { type: "invoices" }>["items"] }) {
   const total = items.reduce((s, i) => s + i.amount, 0);
   return (
-    <div className={cx(card, "overflow-hidden")}>
+    <TableWorkspace title="Records"><div className={cx(card, "overflow-hidden")}>
       <table className="w-full text-[13px]">
         <tbody>
           {items.map((i) => (
@@ -218,7 +219,7 @@ function Invoices({ items }: { items: Extract<Block, { type: "invoices" }>["item
           </tr>
         </tbody>
       </table>
-    </div>
+    </div></TableWorkspace>
   );
 }
 

@@ -24,7 +24,7 @@ export function rolesFor(
       return {
         job,
         applicants: applicants.filter((a) => a.jobId === job.id && a.status === "new"),
-        pool: candidates.filter((c) => c.jobId === job.id && c.status !== "pipeline"),
+        pool: candidates.filter((c) => c.jobId === job.id && (c.status === "pool" || c.status === "contacted")),
         live: roleDeals.filter((d) => d.stage !== "placed"),
         placed: roleDeals.filter((d) => d.stage === "placed"),
       };

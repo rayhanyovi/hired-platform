@@ -1,8 +1,6 @@
-import type { Metadata } from "next";
-import { Inbox } from "@/components/follow-ups/inbox";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Follow-ups · Amara Desk" };
-
-export default function FollowUpsPage() {
-  return <Inbox />;
+/** Updates people are waiting for live in Communication, next to every other message. */
+export default function MovedToCommunication() {
+  redirect("/communication");
 }

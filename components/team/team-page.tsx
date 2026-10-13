@@ -1,13 +1,24 @@
 "use client";
 
-import { Check, Clock, Minus } from "lucide-react";
+import {
+  BadgeCheck,
+  Check,
+  Clock,
+  Minus,
+  ShieldCheck,
+  SlidersHorizontal,
+  UsersRound,
+  Trophy,
+} from "lucide-react";
 import { PERMISSIONS, ROLE_BLURB, ROLE_LABEL, type Access } from "@/lib/agency";
+import { TableWorkspace } from "../ui/table-workspace";
 import { useDesk } from "@/lib/store";
 import { ApprovalCard } from "../deals/discussion";
 import { Leaderboard } from "./leaderboard";
 import { ActorAvatar } from "../ui/member";
 import { Page, PageHeader } from "../ui/page-header";
 import { Button, SectionTitle, cx } from "../ui/primitives";
+import { SubpageTabs } from "../ui/subpage-tabs";
 
 export function TeamPage() {
   const {
@@ -36,33 +47,16 @@ export function TeamPage() {
         invoices go past the Owner first. Every decision lands in the audit log.
       </PageHeader>
 
-      <div
-        data-tour="team-views"
-        className="mb-8 inline-flex rounded-lg border border-line bg-surface p-0.5"
-        role="tablist"
-        aria-label="Team view"
-      >
-        {(
-          [
-            ["members", "Members & rules"],
-            ["leaderboard", "Leaderboard"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={teamView === id}
-            onClick={() => setTeamView(id)}
-            className={cx(
-              "h-7 rounded-md px-3 text-[12px] transition-colors",
-              teamView === id
-                ? "bg-raised text-fg"
-                : "text-fg-muted hover:text-fg",
-            )}
-          >
-            {label}
-          </button>
-        ))}
+      <div data-tour="team-views" className="mb-8">
+        <SubpageTabs
+          label="Team view"
+          value={teamView}
+          onChange={setTeamView}
+          options={[
+            { id: "members", label: "Members & rules", icon: UsersRound },
+            { id: "leaderboard", label: "Leaderboard", icon: Trophy },
+          ]}
+        />
       </div>
 
       {teamView === "leaderboard" ? (
@@ -70,7 +64,7 @@ export function TeamPage() {
       ) : (
         <div className="space-y-12">
           <section>
-            <SectionTitle
+            <SectionTitle icon={UsersRound}
               aside={
                 <span className="text-[11px] text-fg-faint">
                   Demo: switch who you&apos;re signed in as
@@ -144,7 +138,7 @@ export function TeamPage() {
           </section>
 
           <section data-tour="team-approvals">
-            <SectionTitle>Waiting for approval</SectionTitle>
+            <SectionTitle icon={BadgeCheck}>Waiting for approval</SectionTitle>
             {pending.length === 0 ? (
               <p className="rounded-xl border border-dashed border-line-strong px-4 py-6 text-center text-[13px] text-fg-faint">
                 Nothing waiting. All clear.
@@ -159,7 +153,7 @@ export function TeamPage() {
           </section>
 
           <section>
-            <SectionTitle
+            <SectionTitle icon={SlidersHorizontal}
               aside={
                 !isOwner && (
                   <span className="text-[11px] text-fg-faint">
@@ -229,8 +223,8 @@ export function TeamPage() {
           </section>
 
           <section>
-            <SectionTitle>Permissions</SectionTitle>
-            <div
+            <SectionTitle icon={ShieldCheck}>Permissions</SectionTitle>
+            <TableWorkspace title="Permissions"><div
               data-tour="team-permissions"
               className="overflow-x-auto rounded-xl border border-line"
             >
@@ -272,7 +266,7 @@ export function TeamPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </div></TableWorkspace>
           </section>
         </div>
       )}

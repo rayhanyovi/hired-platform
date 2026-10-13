@@ -3,13 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
+  Activity,
   ArrowRight,
+  Briefcase,
   ChevronRight,
+  FileSignature,
   FileText,
+  ListChecks,
   Mail,
   Plus,
   Receipt,
+  StickyNote,
   Upload,
+  UserRound,
 } from "lucide-react";
 import { rolesFor, type RolePeople } from "@/lib/clients";
 import { STAGES } from "@/lib/data";
@@ -18,10 +24,12 @@ import { DOC_KIND_LABEL, DOC_STATUS_LABEL } from "@/lib/documents";
 import { invoicesFor } from "@/lib/home";
 import { memberName, useDesk } from "@/lib/store";
 import { ago, formatDate } from "@/lib/time";
-import type { Client } from "@/lib/types";
+import type { Client, Subject } from "@/lib/types";
 import { EVENT_ICON } from "../deals/activity";
 import { aud, InvoiceRow } from "../home/overview";
 import { LogDocumentDialog } from "../documents/log-dialog";
+import { Notes } from "../records/record";
+import { TaskList } from "../records/tasks";
 import { FitPill } from "../sourcing/parts";
 import { Page } from "../ui/page-header";
 import {
@@ -70,6 +78,7 @@ function ClientDetail({ client }: { client: Client }) {
     deals,
     documents,
     events,
+    tasks,
     isOwner,
     setClientStatus,
     notify,
@@ -77,6 +86,8 @@ function ClientDetail({ client }: { client: Client }) {
   } = useDesk();
   const [posting, setPosting] = useState(false);
   const [logging, setLogging] = useState(false);
+  const subject: Subject = { kind: client.status === "prospect" ? "prospect" : "client", id: client.id, name: client.name };
+  const clientTasks = tasks.filter((t) => t.subject?.id === client.id);
 
   const roles = rolesFor(client.name, { jobs, applicants, candidates, deals });
   const dealIds = new Set(
@@ -88,7 +99,7 @@ function ClientDetail({ client }: { client: Client }) {
   const activity = events
     .filter(
       (e) =>
-        (e.dealId && dealIds.has(e.dealId)) || e.summary.includes(client.name),
+        (e.dealId && dealIds.has(e.dealId)) || e.subjectId === client.id || e.summary.includes(client.name),
     )
     .slice(0, 8);
 
@@ -98,8 +109,8 @@ function ClientDetail({ client }: { client: Client }) {
         aria-label="Breadcrumb"
         className="mb-6 flex items-center gap-1.5 text-[12px] text-fg-faint"
       >
-        <Link href="/clients" className="transition-colors hover:text-fg">
-          Clients
+        <Link href={client.status === "prospect" ? "/prospects" : "/clients"} className="transition-colors hover:text-fg">
+          {client.status === "prospect" ? "Prospects" : "Clients"}
         </Link>
         <ChevronRight className="size-3" />
         <span className="truncate">{client.name}</span>
@@ -147,7 +158,7 @@ function ClientDetail({ client }: { client: Client }) {
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div data-tour="client-roles" className="min-w-0 space-y-6">
-          <SectionTitle>
+          <SectionTitle icon={Briefcase}>
             Roles · {roles.filter((r) => r.job.status !== "filled").length} open
           </SectionTitle>
           {roles.length === 0 && (
@@ -170,8 +181,20 @@ function ClientDetail({ client }: { client: Client }) {
         </div>
 
         <aside data-tour="client-aside" className="space-y-8">
+          <section data-tour="client-tasks">
+            <SectionTitle icon={ListChecks}>Tasks · {clientTasks.filter((t) => !t.done).length} open</SectionTitle>
+            <div className="rounded-xl border border-line bg-surface px-3 pt-3 pb-1">
+              <TaskList tasks={clientTasks} subject={subject} />
+            </div>
+          </section>
+
           <section>
-            <SectionTitle>Contact</SectionTitle>
+            <SectionTitle icon={StickyNote}>Notes</SectionTitle>
+            <Notes subject={subject} />
+          </section>
+
+          <section>
+            <SectionTitle icon={UserRound}>Contact</SectionTitle>
             <div className="rounded-xl border border-line bg-surface p-4">
               <div className="flex items-center gap-3">
                 <Avatar name={client.contact.name} />
@@ -196,7 +219,7 @@ function ClientDetail({ client }: { client: Client }) {
           </section>
 
           <section>
-            <SectionTitle>Terms</SectionTitle>
+            <SectionTitle icon={FileSignature}>Terms</SectionTitle>
             <dl className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface text-[13px]">
               <div className="flex justify-between px-4 py-3">
                 <dt className="text-fg-faint">Standard fee</dt>
@@ -214,7 +237,7 @@ function ClientDetail({ client }: { client: Client }) {
           </section>
 
           <section>
-            <SectionTitle
+            <SectionTitle icon={FileText}
               aside={
                 <Link
                   href="/documents"
@@ -257,7 +280,7 @@ function ClientDetail({ client }: { client: Client }) {
           </section>
 
           <section>
-            <SectionTitle>Activity</SectionTitle>
+            <SectionTitle icon={Activity}>Activity</SectionTitle>
             {activity.length === 0 ? (
               <p className="text-[13px] text-fg-faint">No activity yet.</p>
             ) : (
@@ -315,7 +338,7 @@ function ClientInvoices({
       data-tour="client-invoices"
       className="scroll-mt-20 pt-4"
     >
-      <SectionTitle
+      <SectionTitle icon={Receipt}
         aside={
           unpaid > 0 && (
             <AmaraButton
@@ -376,7 +399,7 @@ function ClientInvoices({
 }
 
 function RoleCard({ role: r }: { role: RolePeople }) {
-  const { openDeal, selectApplicant, selectCandidate, setJobFilter } =
+  const { openDeal, setFocusPerson, setJobFilter } =
     useDesk();
   const filled = r.job.status === "filled";
   const nobody =
@@ -416,7 +439,7 @@ function RoleCard({ role: r }: { role: RolePeople }) {
           No candidates yet.
           {r.job.channels.length > 0 && (
             <Link
-              href="/applicants"
+              href="/candidates"
               onClick={() => setJobFilter(r.job.id)}
               className="inline-flex items-center gap-1 text-fg-muted underline-offset-4 hover:text-fg hover:underline"
             >
@@ -472,10 +495,7 @@ function RoleCard({ role: r }: { role: RolePeople }) {
               action={
                 <Link
                   href="/candidates"
-                  onClick={() => {
-                    setJobFilter("all");
-                    selectCandidate(c.id);
-                  }}
+                  onClick={() => setFocusPerson(c.id)}
                   className="inline-flex items-center gap-1 text-[12px] text-fg-muted hover:text-fg"
                 >
                   View <ArrowRight className="size-3" />
@@ -494,11 +514,8 @@ function RoleCard({ role: r }: { role: RolePeople }) {
               meta={<FitPill fit={a.fit} />}
               action={
                 <Link
-                  href="/applicants"
-                  onClick={() => {
-                    setJobFilter("all");
-                    selectApplicant(a.id);
-                  }}
+                  href="/candidates"
+                  onClick={() => setFocusPerson(a.id)}
                   className="inline-flex items-center gap-1 text-[12px] text-fg-muted hover:text-fg"
                 >
                   Screen <ArrowRight className="size-3" />

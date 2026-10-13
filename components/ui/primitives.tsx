@@ -168,10 +168,14 @@ export function AmaraTag({ children, className, wrap = false }: { children: Reac
   );
 }
 
-export function SectionTitle({ children, aside }: { children: React.ReactNode; aside?: React.ReactNode }) {
+/** A card-level heading. Every one carries an icon, so sections scan the same way everywhere. */
+export function SectionTitle({ children, aside, icon: Icon }: { children: React.ReactNode; aside?: React.ReactNode; icon: React.ComponentType<{ className?: string; strokeWidth?: number }> }) {
   return (
-    <div className="mb-3 flex items-baseline justify-between gap-4">
-      <h2 className="text-[11px] font-medium tracking-[0.08em] text-fg-faint uppercase">{children}</h2>
+    <div className="mb-3 flex items-center justify-between gap-4">
+      <h2 className="flex items-center gap-2 text-[11px] font-medium tracking-[0.08em] text-fg-faint uppercase">
+        <Icon className="size-3.5 text-fg-muted" strokeWidth={1.75} />
+        {children}
+      </h2>
       {aside}
     </div>
   );

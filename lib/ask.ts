@@ -23,9 +23,14 @@ import {
 } from "./deal";
 import { DOC_KIND_LABEL, tobStatus } from "./documents";
 import { FIRST_STEPS, INVOICES, invoicesFor, SUGGESTIONS, TASKS, TEAM_BOARD } from "./home";
+import { sameDay, TODAY } from "./calendar";
+import { awaitingReply } from "./communication";
 import { LESSONS } from "./learnings";
+import { PROSPECT_STAGES, prospectStage } from "./prospects";
 import type { DeskState } from "./store";
 import { memberName } from "./store";
+import { personStatus } from "./people";
+import { isPlacementOpen } from "./placements";
 import { ago, NOW_MS } from "./time";
 
 export type AskContext = {
@@ -41,8 +46,6 @@ const plural = (n: number, one: string, many = `${one}s`) =>
   `${n} ${n === 1 ? one : many}`;
 
 export function askContext(pathname: string, d: DeskState): AskContext {
-  const cooling = d.deals.filter(needsAttention);
-  const live = d.deals.filter((x) => x.stage !== "placed");
 
   const deal = pathname.match(/^\/deals\/([^/]+)/)?.[1];
   if (deal) {
@@ -99,33 +102,36 @@ export function askContext(pathname: string, d: DeskState): AskContext {
             summary: "8 quiet clients · 1 draft invoice · 63 outstanding",
             suggestions: SUGGESTIONS.day30,
           };
-    case "/follow-ups": {
+    case "/communication": {
       const overdue = d.followUps.filter((f) => f.daysWaiting >= 3).length;
+      const unread = d.threads.filter((t) => t.unread).length;
+      const quiet = d.threads.filter((t) => awaitingReply(t) !== null).length;
       return {
-        key: "followups",
-        label: "Follow-ups",
-        summary: `${plural(d.followUps.length, "person", "people")} waiting · ${overdue} overdue`,
-        suggestions: [
-          "Who's been waiting longest?",
-          "Draft the rejections first",
-          "Which updates are quick wins?",
-        ],
+        key: "communication",
+        label: "Communication",
+        summary: `${plural(d.followUps.length, "person", "people")} waiting · ${overdue} overdue · ${unread} unread · ${quiet} gone quiet`,
+        suggestions: ["Who's been waiting longest?", "Draft the rejections first", "Which updates are quick wins?"],
       };
     }
-    case "/pipeline": {
-      const weighted = live.reduce(
-        (s, x) => s + fee(x) * STAGE_ODDS[x.stage],
-        0,
-      );
+    case "/candidates": return { key: "talent", label: "Candidates", summary: `${d.talent.length} saved talent profiles · ${d.candidateCollections.length} collections`, suggestions: ["Which profiles need more information?", "Explore the talent pool", "Summarize recorded candidate history"] };
+    case "/placements": return { key: "placements", label: "Placements", summary: `${d.placements.filter(isPlacementOpen).length} open processes · separate status for each candidate and company`, suggestions: ["Plan next moves for my placements", "Which closed leads could be reused?", "Summarize placement histories"] };
+    case "/prospects": {
+      const prospects = d.clients.filter((c) => c.status === "prospect");
       return {
-        key: "pipeline",
-        label: "Pipeline",
-        summary: `${plural(live.length, "live deal")} · ${cooling.length} cooling · ${money(Math.round(weighted), { compact: true })} weighted`,
-        suggestions: [
-          "What's going cold?",
-          "Which deal should I call first?",
-          "How's my month tracking?",
-        ],
+        key: "prospects",
+        label: "Prospects",
+        summary: `${plural(prospects.length, "prospect")} · ${prospects.filter((c) => c.stage === "terms-sent").length} with terms out · ${prospects.filter((c) => c.stage === "follow-up").length} to chase`,
+        suggestions: ["Which prospects are closest to signing?", "Who should I chase?", "Draft follow-ups for my quiet clients"],
+      };
+    }
+    case "/calendar": {
+      const today = d.calendar.filter((e) => sameDay(e.start, TODAY)).length;
+      return {
+        // Calendar questions are day-planning questions, so they route like Home.
+        key: "general",
+        label: "Calendar",
+        summary: `${plural(today, "event")} today · ${plural(d.tasks.filter((t) => !t.done && t.due !== undefined && sameDay(t.due, TODAY)).length, "task")} due`,
+        suggestions: ["Plan my day", "Which deals are at risk?", "Who's been waiting longest?"],
       };
     }
     case "/clients": {
@@ -133,7 +139,7 @@ export function askContext(pathname: string, d: DeskState): AskContext {
       return {
         key: "clients",
         label: "Clients",
-        summary: `${d.clients.filter((c) => c.status === "active").length} active · ${d.clients.filter((c) => c.status === "prospect").length} prospects · ${open} open roles`,
+        summary: `${d.clients.filter((c) => c.status === "active").length} active clients · ${open} open roles`,
         suggestions: [
           "Which clients need attention?",
           "Where are my biggest fees?",
@@ -141,29 +147,6 @@ export function askContext(pathname: string, d: DeskState): AskContext {
         ],
       };
     }
-    case "/applicants": {
-      const fresh = d.applicants.filter((a) => a.status === "new");
-      return {
-        key: "applicants",
-        label: "Applicants",
-        summary: `${fresh.length} to review · ${fresh.filter((a) => a.fit === "strong").length} strong fits`,
-        suggestions: [
-          "Who are the strongest applicants?",
-          "Summarise what's come in",
-          "Who should I decline?",
-        ],
-      };
-    }
-    case "/candidates":
-      return {
-        key: "candidates",
-        label: "Candidates",
-        summary: `${d.candidates.filter((c) => c.status === "pool").length} shortlisted · ${d.candidates.filter((c) => c.status === "contacted").length} contacted · ${d.candidates.filter((c) => c.status === "pipeline").length} in pipeline`,
-        suggestions: [
-          "Who should I contact first?",
-          "Who's ready for the pipeline?",
-        ],
-      };
     case "/documents": {
       const pending = d.documents.filter(
         (x) => x.status === "pending-approval",
@@ -231,18 +214,74 @@ export function askContext(pathname: string, d: DeskState): AskContext {
 const has = (q: string, ...words: string[]) => words.some((w) => q.includes(w));
 const list = (items: ListItem[]): Block => ({ type: "list", items });
 
+/** What the industry is talking about, for the research brief. Mocked. */
+const NEWS: Record<string, string> = {
+  Infrastructure: "Won a share of the Western Sydney rail systems contract in August; signalling and systems engineers will be hard to find.",
+  "AI tooling": "Raised a Series A in September and is hiring its first platform team.",
+  "Health tech": "Expanding from Perth to the east coast in 2027 after a state health contract.",
+  FMCG: "Opening a new distribution site in Wetherill Park; supply chain leadership is the gap.",
+  Insurance: "Moving pricing in-house, so actuarial and data roles are opening up.",
+  Games: "Shipped a hit mobile title in July and is scaling live-ops.",
+  Hospitality: "Adding four venues in 2027; group operations roles to follow.",
+  Logistics: "Automating two Brisbane warehouses; looking at robotics and ops talent.",
+  Mining: "Approved a new lithium project in the Pilbara; site leadership hiring is starting.",
+};
+
+/** Amara's research brief on a company. Mocked; real research would cite its sources. */
+function research(c: DeskState["clients"][number], d: DeskState): Reply {
+  const roles = rolesFor(c.name, d).filter((r) => r.job.status !== "filled");
+  const people = [c.contact, ...(c.contacts ?? [])];
+  const stage = c.status === "prospect" ? PROSPECT_STAGES.find((s) => s.id === (c.stage ?? "new"))?.label : "Active client";
+  return {
+    text: `Here's a quick read on ${c.name}, from LinkedIn, their careers page and recent news. Check anything before you quote it.`,
+    blocks: [
+      list([
+        { title: "The company", meta: c.website, detail: `${c.industry}${c.size ? `, ${c.size} people` : ""}, based in ${c.location}. With you: ${stage}.` },
+        {
+          title: "Hiring signals",
+          detail: roles.length
+            ? `${plural(roles.length, "open role")} with you: ${roles.map((r) => r.job.title).join(", ")}.`
+            : "Three roles advertised on Seek and LinkedIn in the last 30 days, none with an agency yet.",
+          tone: "good",
+        },
+        { title: "Recent news", detail: NEWS[c.industry] ?? "Nothing notable in the last quarter." },
+        { title: "Who to talk to", detail: `${people.map((p) => `${p.name} (${p.title})`).join(", ")}. Use Find people on their row for more.` },
+        {
+          title: "Suggested angle",
+          detail:
+            c.stage === "terms-sent"
+              ? "Terms are with them. Lead with a strong first shortlist so signing feels obvious."
+              : c.stage === "terms-signed" || c.status === "active"
+                ? "Book a role brief and send two calibrated profiles within a week."
+                : "Open with the hiring signal above and offer two anonymised profiles, no more.",
+          href: c.status === "prospect" ? "/prospects" : `/clients/${c.id}`,
+        },
+      ]),
+    ],
+    followups: ["Who should I chase?", "Which prospects are closest to signing?"],
+  };
+}
+
 /**
  * From Home (or with no page context), send a question to the page that owns
  * the answer, so "who's waiting longest?" reads the follow-up queue.
  */
 function routeKey(key: string, q: string) {
+  // Candidates covers applicants, the shortlist and the pipeline, so the question picks which.
+  if (key === "candidates") {
+    if (/(cold|call first|stuck|at risk|deal|month|fees)/.test(q)) return "pipeline";
+    if (/(applicant|applied|strong|decline|come in|review)/.test(q)) return "applicants";
+    return "candidates";
+  }
+  if (key === "communication") return "followups";
   if (key !== "home" && key !== "general") return key;
   if (/(waiting|ghost|owe|who needs an update)/.test(q) && !/draft/.test(q))
     return "followups";
   if (/(applicant|applied|strong fit)/.test(q)) return "applicants";
   if (/(unsigned|approval|approve|document|terms of business sent)/.test(q))
     return "documents";
-  if (/(prospect|which clients|biggest fees|clients need)/.test(q))
+  if (/(prospect|signing|who should i chase)/.test(q)) return "prospects";
+  if (/(which clients|biggest fees|clients need)/.test(q))
     return "clients";
   if (/(cold|call first|stuck|at risk)/.test(q)) return "pipeline";
   return key;
@@ -255,6 +294,28 @@ export function askReply(
 ): Reply {
   const q = prompt.toLowerCase();
   const key = routeKey(ctx?.key ?? "general", q);
+
+  if (key === "talent") {
+    const named = d.talent.filter((r) => q.includes(r.name.toLowerCase()));
+    const records = named.length ? named : d.talent;
+    return {
+      text: "Your talent pool is a shared record library. Here are profile details to confirm, based on saved information only. Demo Amara does not invent qualifications or start placement processes.",
+      blocks: [list(records.slice(0, 10).map((r) => {
+        const p = d.getCandidateProfile(r);
+        const missing = [!p.experience.length && "work history", !p.education.length && "education", !p.salary && "salary expectations", !p.notice && "availability"].filter(Boolean);
+        return { title: r.name, meta: p.role || r.headline, detail: `${missing.length ? `Confirm: ${missing.join(", ")}.` : "Main profile sections are recorded."} Collections: ${p.collections.join(", ") || "not grouped"}. Recent history: ${d.events.filter((e) => e.subjectId && r.ids.includes(e.subjectId)).slice(0, 3).map((e) => e.summary).join("; ") || "No recorded events yet"}.`, href: "/candidates" };
+      }))], followups: ["Explore available placement roles", "Review missing education information"],
+    };
+  }
+  if (key === "placements") {
+    const named = d.placementPeople.filter((r) => q.includes(r.name.toLowerCase()));
+    const rows = named.length ? named : d.placementPeople.filter((r) => d.placements.some((p) => p.id === r.placementId && (has(q, "closed", "reuse") ? !isPlacementOpen(p) : isPlacementOpen(p))));
+    return { text: "Each recommendation belongs to one candidate–client process. A closed outcome does not change the shared talent profile or another company's process. These are demo suggestions for human review; nothing has been submitted or progressed.", blocks: [list(rows.slice(0, 10).map((r) => ({ title: `${r.name} · ${r.client}`, meta: `${r.roleTitle} · ${personStatus(r.status).label}`, detail: `${personStatus(r.status).description} ${["closed", "placed"].includes(personStatus(r.status).group) ? "Review another company's brief and start a separate placement using the same profile." : "Complete the next required form, using this client's contacts and schedule."}`, href: "/placements" })))], followups: ["Which profiles can be reused?", "Review placement history"] };
+  }
+
+  // "Deep research on <company>", from a prospect or client's right-click menu.
+  const researched = has(q, "research") ? d.clients.find((c) => q.includes(c.name.toLowerCase())) : undefined;
+  if (researched) return research(researched, d);
 
   if ((key === "home" || key === "general") && has(q, "plan my day", "what should i do today", "today's priorities")) {
     if (d.homeStage === "day1") {
@@ -274,9 +335,9 @@ export function askReply(
       priorities.push({ title: `Protect ${deal.candidate.name}'s deal first`, meta: `${plural(urgent.length, "deal")} ${urgent.length === 1 ? "needs" : "need"} attention`, detail: `${deal.role.title} at ${deal.role.client} · ${money(fee(deal))} fee. Last touched ${idleLabel(deal.hoursIdle)} ago; confirm the next step with the client.`, href: `/deals/${deal.id}`, tone: "warm" });
     }
     const quiet = TASKS.filter((task) => !d.completedHomeTasks.includes(task.id)).sort((a, b) => b.priority - a.priority);
-    if (quiet.length) priorities.push({ title: `Reconnect with ${quiet[0].company}`, meta: `${plural(quiet.length, "quiet client")} on your task list`, detail: `Start with the highest-priority follow-up: ${quiet[0].detail}. Review a short draft before sending it.`, href: "/", tone: "warm" });
+    if (quiet.length) priorities.push({ title: `Reconnect with ${quiet[0].company}`, meta: `${plural(quiet.length, "quiet client")} on your task list`, detail: `Start with the highest-priority follow-up: ${quiet[0].detail}. Review a short draft before sending it.`, href: "/prospects", tone: "warm" });
     const waiting = [...d.followUps].sort((a, b) => b.daysWaiting - a.daysWaiting);
-    if (waiting.length) priorities.push({ title: "Give waiting candidates an update", meta: plural(waiting.length, "follow-up"), detail: "Work from the longest wait first. An honest no-news update is better than silence.", href: "/follow-ups" });
+    if (waiting.length) priorities.push({ title: "Give waiting candidates an update", meta: plural(waiting.length, "follow-up"), detail: "Work from the longest wait first. An honest no-news update is better than silence.", href: "/communication" });
     const draft = INVOICES.find((invoice) => invoice.status === "draft");
     if (draft) priorities.push({ title: `Review ${draft.client}'s draft invoice`, meta: money(draft.amount), detail: "Check the placement details and required approval before it is sent.", href: "/documents" });
     return {
@@ -338,7 +399,7 @@ export function askReply(
               title: f.name,
               meta: FOLLOW_UP_LABEL[f.kind],
               detail: f.detail,
-              href: "/follow-ups",
+              href: "/communication",
             })),
           ),
         ],
@@ -353,7 +414,7 @@ export function askReply(
             title: f.name,
             meta: `${f.daysWaiting}d · ${FOLLOW_UP_LABEL[f.kind]}`,
             detail: f.detail,
-            href: "/follow-ups",
+            href: "/communication",
             tone: f.daysWaiting >= 3 ? ("warm" as const) : undefined,
           })),
         ),
@@ -572,6 +633,40 @@ export function askReply(
     }
   }
 
+  if (key === "prospects") {
+    const prospects = d.clients.filter((c) => c.status === "prospect");
+    const order = (c: (typeof prospects)[number]) => PROSPECT_STAGES.findIndex((s) => s.id === (c.stage ?? "new"));
+    if (has(q, "chase", "quiet", "follow")) {
+      const chase = prospects
+        .map((c) => ({ c, late: d.tasks.filter((t) => !t.done && t.subject?.id === c.id && t.due !== undefined && t.due < TODAY) }))
+        .filter((x) => x.c.stage === "follow-up" || x.late.length)
+        .sort((a, b) => (a.c.lastContactedAt ?? 0) - (b.c.lastContactedAt ?? 0));
+      return {
+        text: chase.length ? "Chase these first, longest silence at the top. Each has gone quiet or has an overdue task:" : "Nobody needs chasing right now.",
+        blocks: chase.length
+          ? [list(chase.map(({ c, late }) => ({ title: c.name, meta: c.lastContactedAt ? `Last contact ${ago(c.lastContactedAt)}` : "Not contacted", detail: late[0]?.title ?? prospectStage(c.stage).description, href: "/prospects", tone: "warm" as const })))]
+          : [],
+        followups: ["Draft follow-ups for my quiet clients", "Which prospects are closest to signing?"],
+      };
+    }
+    const ranked = [...prospects].sort((a, b) => order(b) - order(a));
+    return {
+      text: "Your prospects, closest to signing first:",
+      blocks: [
+        list(
+          ranked.slice(0, 8).map((c) => ({
+            title: c.name,
+            meta: prospectStage(c.stage).label,
+            detail: c.stage === "terms-signed" ? "Signed. Make them a client and book a role brief." : c.stage === "terms-sent" ? "Terms are with them. Chase for a signature." : prospectStage(c.stage).description,
+            href: c.stage === "terms-signed" || c.stage === "terms-sent" ? `/clients/${c.id}` : "/prospects",
+            tone: c.stage === "terms-signed" || c.stage === "terms-sent" ? ("good" as const) : undefined,
+          })),
+        ),
+      ],
+      followups: ["Who should I chase?", "Where are my biggest fees?"],
+    };
+  }
+
   if (key === "clients") {
     const all = d.clients.map((c) => ({
       c,
@@ -671,7 +766,7 @@ export function askReply(
       const weak = fresh.filter((a) => a.fit === "unlikely");
       return {
         text: weak.length
-          ? "These don't fit their briefs. Declining them queues an honest update in Follow-ups:"
+          ? "These don't fit their briefs. Declining them queues an honest update in Communication:"
           : "No clear declines right now. Everyone left is at least a possible fit.",
         blocks: weak.length
           ? [
@@ -680,7 +775,7 @@ export function askReply(
                   title: a.name,
                   meta: `${FIT_LABEL[a.fit]} · ${jobTitle(a.jobId)}`,
                   detail: a.gaps[0],
-                  href: "/applicants",
+                  href: "/candidates",
                 })),
               ),
             ]
@@ -700,7 +795,7 @@ export function askReply(
             [...byJob].map(([title, n]) => ({
               title,
               meta: plural(n, "applicant"),
-              href: "/applicants",
+              href: "/candidates",
             })),
           ),
         ],
@@ -719,7 +814,7 @@ export function askReply(
             title: a.name,
             meta: jobTitle(a.jobId),
             detail: a.summary,
-            href: "/applicants",
+            href: "/candidates",
             tone: "good" as const,
           })),
         ),
@@ -976,4 +1071,25 @@ export function askReply(
 
   // Home, Dashboard and anything without its own handler use Amara's general replies.
   return amaraReply(prompt, key === "home" ? d.homeStage : "day30");
+}
+
+
+/** Related questions for a prompt a button handed to the drawer, so there's always a choice. */
+const RELATED: [RegExp, string[]][] = [
+  [/draft.*(follow|quiet)|quiet clients/, ["Which of these clients is worth the most?", "Make the follow-ups warmer", "Who should I chase first?"]],
+  [/draft a follow-up to (.+)/, ["What's happened with them so far?", "Draft a shorter version", "Who should I chase first?"]],
+  [/invoice/, ["Which invoices are overdue?", "Draft a reminder for the oldest unpaid invoice", "How much is outstanding?"]],
+  [/tracking|how am i/, ["Where am I behind target?", "What should I focus on this week?", "Which deals are at risk?"]],
+  [/plan my day|today/, ["Which deals are at risk?", "Who's been waiting longest?", "Draft follow-ups for my quiet clients"]],
+  [/research/, ["Who should I contact there?", "Draft an intro email", "Which prospects are closest to signing?"]],
+  [/prospect|signing|chase/, ["Who should I chase?", "Draft follow-ups for my quiet clients", "Which prospects are closest to signing?"]],
+  [/target|calls|submittals|interviews|offers|placements/, ["How am I tracking this month?", "What's a good weekly target?", "Where am I behind target?"]],
+  [/leaderboard|gap/, ["Who's top of the leaderboard?", "How do I compare to my team?", "How am I tracking this month?"]],
+];
+
+export function promptOptions(text: string, ctx: AskContext, extra: string[] = []) {
+  const q = text.toLowerCase();
+  const related = RELATED.find(([re]) => re.test(q))?.[1] ?? [];
+  const all = [text, ...extra, ...related, ...ctx.suggestions];
+  return [...new Set(all.map((x) => x.trim()).filter(Boolean))].filter((x, i, a) => a.findIndex((y) => y.toLowerCase() === x.toLowerCase()) === i).slice(0, 4);
 }

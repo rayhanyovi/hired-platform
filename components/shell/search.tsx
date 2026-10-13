@@ -14,6 +14,9 @@ import {
   Search,
   ShieldCheck,
   Briefcase,
+  ListChecks,
+  Mail,
+  Target,
   UsersRound,
 } from "lucide-react";
 import { buildIndex, KIND_LABEL, lens, looksLikeQuestion, search, type Result, type ResultKind } from "@/lib/search";
@@ -24,16 +27,19 @@ const KIND_ICON: Record<ResultKind, typeof Search> = {
   page: LayoutGrid,
   deal: Columns3,
   client: Building2,
+  prospect: Target,
   role: Briefcase,
   candidate: UsersRound,
   applicant: Inbox,
   followup: MessageSquareText,
+  message: Mail,
+  task: ListChecks,
   document: FileText,
   lesson: GraduationCap,
   member: ShieldCheck,
 };
 
-const EXAMPLES = ["deals going cold", "unsigned", "strong fit", "Laura", "Tidewater"];
+const EXAMPLES = ["deals going cold", "unsigned", "strong fit", "chase", "Laura", "Tidewater"];
 
 /** ⌘K anywhere. */
 export function SearchPalette() {

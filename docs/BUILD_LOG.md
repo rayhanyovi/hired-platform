@@ -150,3 +150,132 @@ Validation: TypeScript, ESLint and production build passed. Diff assertions cove
 Added the shared Amara-style Plan my day action next to Home's visibility and time-range controls. It opens the contextual Ask drawer with a prioritised suggested plan: the deal with the greatest risk value, incomplete client follow-ups, waiting candidate updates and the dashboard's draft invoice. New members receive their incomplete first steps in order. Guidance uses current in-memory desk state and existing invoice fixtures; AI replies remain simulated. The shared compact select style replaces the native arrow with an inset chevron, reserves 32px on the right and retains native keyboard/select behaviour. Drawer message IDs now use UUIDs to avoid collisions after development refreshes.
 
 Validation: TypeScript, ESLint and production build passed. Browser checks verified Day 30 priorities, new-member steps, Home context, and switching to This week with updated metrics. Computed dropdown styles showed 32px right padding and the chevron 10px from the edge. Screenshot: `.artifacts/home-daily-plan-controls.png`.
+
+## 13 Oct 2026 — Merge with the staging feature set
+
+Rayhan reviewed HeyAmara's staging app (no source, staging access only) and asked to keep building this project while adopting what staging does better. Kept from this project: Chat, Documents, Audit trail, Learnings, the rail sidebar and the existing design direction. Taken from staging: one simplified Candidates list, Calendar, Communication, Tasks on any record, fuller Analytics, a Sales tab, and a Prospects page. Clients and Prospects now sit together under Business in the rail.
+
+- **Candidates** (`/candidates`): applicants, the shortlist, the pipeline and people waiting on an update are one list with one status per person (`lib/people.ts` builds the view over the existing applicant → candidate → deal records, so deal pages, approvals and documents are untouched). Table and Board views; status menu moves people through whichever records they need (`setPersonStatus`). Clicking a row expands it in place: profile, Amara's screening or deal read, history, original application, tasks and notes. `/applicants` and `/pipeline` redirect here.
+- **Prospects** (`/prospects`): stages New → Interested → Follow up → Meeting → Negotiation → Terms sent → Terms signed; table and board; expanding rows with contacts, Amara's "Find people at…" (on request), history, tasks and notes; "Make them a client" once signed. Nine new seed prospects. Clients now lists active clients only.
+- **Calendar** (`/calendar`): day, week and month; interviews, meetings, calls, follow-ups, start dates, plus tasks on their due day; type filters, "only mine", event details and a New event dialog.
+- **Communication** (`/communication`): email, SMS, LinkedIn and WhatsApp threads, call log, Starred and Sent; "No reply yet" flags anything sent 3+ days ago with a "Follow up?" nudge; Amara drafts replies and nudges on request. The Follow-ups composer lives on as the "Waiting on you" folder. `/follow-ups` redirects here.
+- **Tasks and notes** on clients, prospects and candidates (`lib/tasks.ts`, store `addTask` / `toggleTask` / `removeTask` / `addNote`). Home's Tasks panel now shows every real task with a chip back to its record. The dummy quiet-client companies were renamed to real prospects and clients (B-005).
+- **Home Analytics** rebuilt with Revenue, Lead generation, Conversion and Growth sections; new **Sales** tab (dials, calls booked, show/close rates against targets, closer and setter tables). Small chart kit in `components/home/charts.tsx` with hover and keyboard readouts.
+- Search, Ask HeyAmara contexts, notifications, tours and the mobile bottom nav updated for the new pages.
+
+Validation: TypeScript, ESLint and production build passed. Browser checks at 1440px: Candidates table, row expansion, board, status change from Applied to Screening (stats and weighted fees updated); Prospects expansion and Find people; Calendar week view, event details, all-day overflow, New event; Communication folders and a streamed reply draft; Home Analytics and Sales; Home task chip opening the right Candidates row. At 375px no page scrolls horizontally on Home, Candidates, Prospects, Calendar, Communication or Clients. `/applicants`, `/pipeline` and `/follow-ups` return 307 to their new homes. Drag-and-drop on the boards was not exercised in the browser.
+
+
+## 13 Oct 2026 — Candidates profile, collections and required pipeline forms
+
+Kept Amara Desk's own design direction, using staging only to inspect all nine form-based status workflows. Added quiet status row washes, removed the Tasks table column, made role/location/expected pay editable in the row, and made the full recruiter-managed professional profile the default expanded tab. Profiles cover experience, education, certifications, skills, languages, links, compensation, availability and preferences. Existing source application answers seed known details; missing facts remain editable blanks.
+
+Added many-to-many candidate Collections with owner/status/role/search filtering. Shared modal behavior now portals previews, traps focus, restores focus/scroll and closes only the top modal on Escape. Added the exact 13 named status options plus No Status, with central form enforcement from candidate and deal controls. Valid schedules create local Calendar records; reviewed offer metadata appears in Documents. AI summary/submission drafts and a missing-document-detail checklist are on-request, editable and explicitly simulated. See [Candidates contract](CANDIDATES.md) for fields, design decisions and parity limits.
+
+Validation: TypeScript, ESLint and production build passed. Nine form contract assertions covered missing/complete data, conditional fields, reversed times, document review, fees and timezone/DST conversions. Browser checks covered all nine modal openings and Escape cancellation, invalid/valid interview confirmation, applicant-to-deal retention of profile and collection edits, manual profile/education/skills, inline salary, collections and AI draft review. Nested CV Escape restored body scroll. At 375px Candidates had no horizontal page overflow and the interview modal remained contained. Board drag was attempted but did not trigger a drop; its full interaction remains unverified. Later staging Offer Sent extraction steps were not traversed: the local manual review is an explicit prototype adaptation. No staging saves, deployment or commit.
+
+## 13 Oct 2026 — Communication rework
+
+Rebuilt `/communication` around people instead of folders and channels.
+
+- **One conversation per person** (`lib/conversations.ts`): email, SMS, WhatsApp and LinkedIn threads, calls and an owed update merge into one timeline with day separators. Threads stay per channel underneath.
+- **Triage**: stat cards (Replied to you, Owed an update, Gone quiet, Calls this week) and tabs Needs you / Waiting / All / Snoozed / Done. Needs you is grouped by what to do. Each row says why it's there. Owed updates can't be marked done; sending clears them.
+- **Composer**: switch channel per message, templates (pre-call pack, booking link, consent, workstyle), Amara drafts on request (reply, nudge, honest update with tone and "what Amara uses"), then Shorter / Warmer / Firmer. Send now or schedule (later today, tomorrow, Monday); scheduled messages can be cancelled.
+- **Calls**: start a call from the header (timed), then log outcome and note; manual "Log a call" too. Calls show in the timeline.
+- **Context panel**: contact details, candidate status and heat or company stage and terms, Amara's summary on request, what we know, coming up, tasks and notes. Below 1280px it opens as a sheet.
+- Pin, snooze, mark done/unread, bulk select (done, read, snooze), right-click on rows, keyboard (J/K, R, E, P, U), search across names and message text.
+- Store: `scheduledFor` on messages, `cancelScheduled`, per-person `conversationFlags`. Two new inbound seed threads (Priya Raman SMS, Rohan Iyer LinkedIn). The old folder page and follow-ups composer were replaced.
+
+Validation: TypeScript, ESLint and production build passed. Browser checks at 1440px: Needs you groups and counts; Owen (WhatsApp + call) reply drafted, sent and moved to Waiting; Daniel's owed update drafted from his facts, sent as a new email, Owed count 7 → 6; Marcus call timed, ended, logged with a note (calls 7 → 8) and summarised; search across message text. At 375px: no horizontal scroll, list → conversation → back, details sheet. Not exercised: bulk actions, snooze, scheduled send and cancel, templates.
+
+## 13 Oct 2026 — Communication: labels, new people, list hierarchy
+
+- **Labels**, as in staging (`lib/labels.ts`, components in `components/communication/labels.tsx`). Labels are your own, have a colour, and can nest ("Roles / Senior SRE"). Filtering by a parent includes everything under it. A label bar under the tabs filters the list and shows counts for the current tab; picking a parent opens its sub-labels. Right-click a label to show only it, rename it, add a sub-label, recolour or delete it (with what's nested). Labels are also in the filter menu, in each row's right-click menu ("Label as": a filter-or-create picker with checkboxes), in bulk actions, on rows, and in the side panel. Store: `labels`, `addLabel`, `updateLabel`, `deleteLabel`, `toggleLabel`; labels live on `conversationFlags`. Seeded with New business, Counter-offer risk, Fee talks, Referrals and Roles (Senior SRE, Engineering Manager, Lead Data Engineer). No emoji, per the design direction.
+- **New people**: four seed threads from people who aren't a candidate, client or prospect yet (Hannah Whitfield at Arcadia Games, an unknown number that signs as Kai Nguyen, Mateo Alvarez from Tidewater Bank's domain, Chloe Bennett on LinkedIn). They get their own "New people" group in Needs you, a dashed avatar, a banner and a side-panel block. "Add to your desk" (banner, side panel, right-click) makes them a candidate, a contact at an existing company, or a new prospect. Prefilled from their signature, and the email domain suggests the company. Their conversation, labels and pins move onto the new record (`recognizeContact`).
+- **List hierarchy**: underlined view tabs with the Needs you count as the loudest element, a toolbar header, group headers with the same coloured tiles as the stat cards, rows as cards with a clear active state, and a coloured reason pill per row. Who and Channel moved into the filter button, with chips when they're on.
+- **Fixes**: `useTrackedData` no longer lets an older render's data overwrite a newer write (it caused a "Maximum update depth" loop when Communication marked a thread read). Rows no longer sort unread first, so reading one doesn't cascade through the whole list, and phones don't mark the top conversation read before it's opened.
+
+Validation: TypeScript, ESLint and production build passed. Browser checks at 1440px: label bar filter, filter-menu label, Label as picker, new sub-label under Roles; Kai added as a candidate, Mateo as a Tidewater Bank contact (domain match), Hannah as a new prospect, each keeping their labels; no update-depth errors after reload. At 375px: no horizontal scroll, unread state kept until opened, banner wraps. Not exercised: rename, recolour and delete of a label, bulk label.
+
+## 13 Oct 2026 — One toggle style; Clients list expands in place
+
+- Every two-to-five-option toggle now uses `Segmented` (`components/ui/menu.tsx`): bordered group, sliding raised pill, always a text label, icons on view toggles. Replaced the hand-rolled ones on Clients (was icon-only), Team (view and leaderboard), Home's leaderboard and demo-state toggles, Learnings, and Documents (Register / Generate, direction). `Segmented` options can now be disabled with a reason. Prospects' "Table" is now "List" to match Placements and Clients. Page-level tabs (Home Overview / Analytics / Sales, Communication's views, tabs inside records) stay as they are.
+- Clients opens on **List** by default. A row expands in place, like Candidates and Prospects: client facts (location, fee, terms, main contact, since), Open roles / Contacts / History tabs, Tasks and Notes, and a footer with Post a role, Email the main contact, and a link to the full client page. Cards view is unchanged.
+
+Validation: TypeScript, ESLint and production build passed. Browser check at 1440px: Clients list default, Tidewater Bank expanded with roles, contacts and tasks, switch to Cards.
+
+## 13 Oct 2026 — Full-width pages; Communication spacing
+
+- Every page now uses the same 1600px container as Communication (`Page`, Home, the loading skeleton). `Page`'s `wide` prop is kept but no longer changes anything. Text blocks keep their own reading widths.
+- Communication: more room between the cards and the panel, wider list (392px) and side panel (320px), more padding in the list header, label bar, group headers and rows, wider margins around the timeline and composer, more space between days and messages, and roomier side-panel sections. Label chips in the side panel no longer truncate.
+
+Validation: TypeScript, ESLint and production build passed. Checked Communication at 1456px; no horizontal scroll at 375px on Communication or Clients.
+
+
+## 13 Oct 2026 — Talent database and independent Placements
+
+Separated Candidates into a data-only talent library: manually saved profiles, collections, source documents, notes and aggregate history. Removed its pipeline statuses, fit/heat columns, application queues and board. Added Placements at `/placements`, with `/pipeline` redirecting there. Kept expandable list rows and made board cards open their next required workflow form; details/history remains separately accessible.
+
+Added a canonical candidate ID and independent placement IDs per company/role/attempt. A bulk chooser can start several processes from one saved person, validates all roles before writes and blocks duplicate active processes. Closing a company process does not change the shared profile or another company. Completed forms are retained as snapshots; every committed status change, accepted edit, note and AI draft request records actor/time/IDs. Referenced history joins by ID rather than name, and the renderer exposes all retained events. Linked legacy deals remain available without inventing fees for newly created placements.
+
+Profiles, manual talent, processes, dependent source/client/job records, notes, calendar, document metadata and audit history now persist in versioned local browser storage. Added source-grounded demo AI for talent exploration/history, role-title suggestions, editable process next steps, submission drafts and every form's review checklist. Accepted next-step drafts can be saved as notes. Shared header styles now cover Candidates, Placements and the expandable Clients list without changing the existing design direction. Wide native tables use layout/paint containment to keep their scroll area inside the page on mobile.
+
+Validation: seven domain tests passed (`node --test tests/placements.test.mjs`), TypeScript and ESLint passed, and the production build passed. Browser QA created two company processes for one candidate, closed Halcyon as Not Qualified while Northwind remained Active, recorded Northwind's reviewed submission, then created a Tidewater attempt from the closed opportunity. All three retained independent outcomes and the shared profile showed aggregate history. Verified scoped versus aggregate history, saved AI notes, all nine form openings/Escape cancellation, list expansion and board-to-form progress. A manually added profile and a shared salary edit survived reload, along with the three process outcomes. At 375px both pages had document width equal to viewport width, with contained expanded profiles and a scrollable interview modal; inspected Placements at 1440px. Screenshot: `.artifacts/placements-talent-pool.jpg`.
+
+Backend/shared editing, live AI and outbound/file-binary integrations remain unconnected; Offer Sent's later extraction steps retain the disclosed manual-review adaptation. Native board drag remains unverified. No commit or deployment performed. See CANDIDATES.md and PLACEMENTS.md for current contracts.
+
+## 13 Oct 2026 — Expanded candidate profile proportions
+
+Changed the profile to a two-column 1:2 desktop layout. Basic role, pay, contact and availability fields occupy the left third; summary, experience, qualifications, links and collections occupy the right two thirds. Removed the profile reading-width cap while retaining it for History and Notes. Existing edit, documents and AI actions remain available.
+
+Validation: TypeScript, ESLint and production build passed. Browser measurements at 1440px showed 414px and 828px columns with aligned tops; at 375px they stacked at 303px each and document width stayed 375px. Screenshot: `.artifacts/candidate-profile-two-columns.jpg`.
+
+## 13 Oct 2026 — Candidate expanded row follows the Clients pattern
+
+The expanded candidate row (`CandidateRecordView` in `components/candidates/profile.tsx`) now uses the same layout as Clients and Prospects: facts on the left (role, location, pay, contact, notice, work style, work rights, collections as toggle chips), Profile / History tabs in the middle with Read with Amara, Tasks / Notes on the right, and a footer with Edit profile, Documents and Archive. Empty profile sections are quiet "Add …" links in a two-column grid instead of large dashed boxes. Edit, documents and Amara draft modals are unchanged. Tasks were added to the candidate record.
+
+Validation: TypeScript, ESLint and production build passed; Laura Chen's row checked at 1456px.
+
+## 13 Oct 2026 — Candidates record and shared overview styling
+
+Aligned the expanded Candidates record with Clients: icon-led facts, shared record tabs, compact section labels, divided entry lists, collection chips and footer actions. Kept the requested two-column 1:2 layout; Notes shares the content panel rather than adding a third sidebar. Candidates and Placements now use the existing StatRow/StatCard components for overview metrics.
+
+Validation: TypeScript, ESLint and production build passed. Browser checks covered Profile/History/Notes, Edit and Documents with Escape close, and the updated overview strips. Both pages stayed within a 375px document viewport; the expanded profile stacked into two 343px-wide panels. Desktop proof: `.artifacts/candidates-clients-style.jpg` and `.artifacts/placements-shared-statistics.jpg`.
+
+## 13 Oct 2026 — Expanded rows line up with their rows
+
+Candidates, Clients and Prospects now use one 20px inset: list rows, grid table headers (`GridTableHeader`), the expanded panels and their footers. Measured in the browser: the row avatar or logo, the expanded panel's first column and the footer's first button all start at the same x on Candidates and Clients.
+
+## 13 Oct 2026 — Daily welcome and shared subpage navigation
+
+Home claims its welcome once per member per local calendar day in browser storage before the animation starts. Same-day returns and reloads show the docked dashboard; reduced-motion behavior and a session fallback remain supported. Added shared SubpageTabs with Home’s existing visual treatment for Home, Documents and Team. Removed the Home numbers helper sentence. Audit overview now uses StatRow/StatCard; Documents uses colored MetricIconTile file-input/file-output glyphs for received/generated records.
+
+Validation: four daily-gate tests passed, including midnight rollover and unavailable storage. TypeScript, ESLint and production build passed. Browser observed the first visit at orb and a reload at ready, confirmed the removed helper text, Documents Register/Generate and Team Leaderboard switching, the new document tiles and Audit overview. Audit and Documents remained within a 375px viewport. Screenshots: `.artifacts/documents-shared-tabs-icons.jpg` and `.artifacts/audit-shared-overview.jpg`.
+
+## 13 Oct 2026 — Collection sheets and expanded table workspaces
+
+Replaced Candidates collection dropdown/inline creation with a scrollable sheet bar below the table: All Candidates, per-collection tabs with membership counts, and a plus button opening an Escape-closeable creation modal. Added shared TableWorkspace expansion across Candidates, Placements, Clients, Prospects, Documents, Audit, Team permissions/leaderboard, Home leaderboard/Sales and inline chat record tables. Expanded mode fills the usable app area, retains the rail/header, hides page overviews behind it, keeps row/filter state mounted and restores with Back to page or Escape.
+
+Validation: TypeScript, ESLint and production build passed. Browser checks confirmed collection filtering, creation modal Escape priority, expanded Candidate workspace and mobile width 375px. Verified expansion/restoration on Clients, Prospects, Placements, Documents, Audit, Team permissions/leaderboard and Home leaderboard. Saved `.artifacts/candidates-expanded-sheets.jpg`. Sales and inline chat tables share the component but were not individually exercised.
+
+## 13 Oct 2026 — Immediate profile insights and Placement assessment
+
+Candidates shows an immediate AI profile summary from reviewed text or saved fields, with recorded strengths/missing information and editable review. Placements now uses the Candidates/Clients two-panel record layout, immediate company/role-scoped fit, Assessment/History/Notes tabs, process records/context and progression footer. Added recruiter-editable shared role requirements with persistence and audit events. Demo coverage uses explicit term matching; missing briefs and evidence remain unknown, and operational stage signals do not become qualification matches.
+
+Validation: domain insight and placement tests passed; TypeScript, ESLint and production build passed. Browser verified immediate Candidate and Placement cards, editable summary review, Placement History/Notes tabs, role requirements modal Escape, and mobile Placement width equal to 375px. Desktop panels measured 382px/764px at 1280px. Screenshots: `.artifacts/candidates-immediate-summary.jpg` and `.artifacts/placements-immediate-fit.jpg`. Requirement coverage, negated evidence, reviewed summary precedence and cross-company screening isolation are covered in the insight tests.
+
+## 13 Oct 2026 — Candidates header expand control
+
+Moved Candidates expansion into the final table-header cell as an icon-only control. Removed its separate workspace title/action row. Kept tooltip, accessible label, pressed state, collapse icon and Escape focus restoration. Browser verified header placement, empty button text and expand/Escape collapse; screenshot `.artifacts/candidates-header-expand.jpg`. TypeScript, ESLint and production build passed.
+
+## 13 Oct 2026 — Notes wiki
+
+Added a Notes workspace to the main navigation. The page has searchable wiki pages, a focused editor, create/delete controls and browser-local autosave, using the existing dark Amara surfaces and shared page header.
+
+Validation: TypeScript, ESLint and production build passed. Browser confirmed the Notes route, navigation entry, starter page and editor; screenshot `.artifacts/notes-wiki.jpg`.
+
+## 13 Oct 2026 — Notes full-height workspace
+
+Notes now stretches its editor workspace to fill the page height and offers a full-page mode that uses the shared expanded-workspace behavior, including Escape to return. The full-page control stays inside the note toolbar.
+
+Validation: TypeScript, ESLint and production build passed. Browser confirmed the full-height default, full-page expansion and Escape restoration.

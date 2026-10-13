@@ -2,13 +2,15 @@
 
 import { Fragment, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronDown, Download, History, Search } from "lucide-react";
+import { ArrowRight, ChevronDown, Download, History, Layers, ListChecks, Search, UsersRound } from "lucide-react";
 import { memberName, useDesk } from "@/lib/store";
 import { AUDIT_MODULES, auditValue, fieldLabel, moduleForAction } from "@/lib/audit";
 import type { AuditRecord } from "@/lib/types";
 import { ActorAvatar } from "../ui/member";
 import { compactSelectClass, inputClass } from "../ui/modal";
 import { Page, PageHeader } from "../ui/page-header";
+import { TableWorkspace } from "../ui/table-workspace";
+import { StatCard, StatRow } from "../ui/metrics";
 import { Button, cx } from "../ui/primitives";
 
 const date = (ms: number) => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Jakarta", day: "2-digit", month: "short", year: "numeric" }).format(ms);
@@ -54,15 +56,14 @@ export function AuditPage() {
         See who changed a record, which module it came from, and the exact before and after values.
       </PageHeader>
 
-      <dl className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line lg:grid-cols-4">
-        {[
-          { label: "Recorded events", value: events.length },
-          { label: "Field changes", value: events.reduce((n, e) => n + (e.records?.reduce((s, r) => s + r.fields.length, 0) ?? 0), 0) },
-          { label: "Actors", value: new Set(events.map(e => e.actorId)).size },
-          { label: "Modules", value: new Set(events.flatMap(e => [e.module ?? moduleForAction(e.action), ...(e.records?.map(r => r.module) ?? [])])).size },
-        ].map(s => <div key={s.label} className="bg-surface px-4 py-4"><dt className="text-[12px] text-fg-muted">{s.label}</dt><dd className="mt-2 text-[24px] font-semibold num">{s.value}</dd></div>)}
-      </dl>
+      <StatRow cols={4} className="mb-6">
+        <StatCard icon={History} tile="bg-submittals-tile" label="Recorded events" value={events.length} />
+        <StatCard icon={ListChecks} tile="bg-offers-tile" label="Field changes" value={events.reduce((n, e) => n + (e.records?.reduce((s, r) => s + r.fields.length, 0) ?? 0), 0)} />
+        <StatCard icon={UsersRound} tile="bg-placements-tile" label="Actors" value={new Set(events.map(e => e.actorId)).size} />
+        <StatCard icon={Layers} tile="bg-interviews-tile" label="Modules" value={new Set(events.flatMap(e => [e.module ?? moduleForAction(e.action), ...(e.records?.map(r => r.module) ?? [])])).size} />
+      </StatRow>
 
+    <TableWorkspace title="Audit trail">
       <div data-tour="audit-filters" className="mb-4 flex flex-wrap items-center gap-2">
         <select value={module} onChange={e => setModule(e.target.value)} aria-label="Module" className={compactSelectClass}><option value="all">All modules</option>{AUDIT_MODULES.map(m => <option key={m}>{m}</option>)}</select>
         <select value={actor} onChange={e => setActor(e.target.value)} aria-label="Actor" className={compactSelectClass}><option value="all">All actors</option>{members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}<option value="amara">Amara</option><option value="system">System</option></select>
@@ -95,6 +96,7 @@ export function AuditPage() {
         </table>
         {!rows.length && <div className="bg-surface px-4 py-12 text-center"><History className="mx-auto mb-3 size-6 text-fg-faint" /><p className="text-[13px] text-fg-muted">No events match these filters.</p><button onClick={() => { setModule("all"); setActor("all"); setOperation("all"); setPeriod("all"); setQuery(""); }} className="mt-3 text-[12px] text-fg underline underline-offset-4">Clear filters</button></div>}
       </div>
+    </TableWorkspace>
     </Page>
   );
 }

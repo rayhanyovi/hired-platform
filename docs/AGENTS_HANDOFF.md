@@ -2,7 +2,7 @@
 
 Read this before touching the code. It's written for a coding agent (or a human) picking up the work cold.
 
-**Last updated:** 11 Oct 2026, 14:30 WIB · **Owner:** Rayhan (Jakarta, writes casual Indonesian; reply in kind)
+**Last updated:** 13 Oct 2026 · **Owner:** Rayhan (Jakarta, writes casual Indonesian; reply in kind)
 
 ## 1. What this is
 
@@ -34,13 +34,23 @@ npx next build
 
 All three must pass before handing back. The in-app browser pane is small and throttled: verify with DOM checks (`javascript_tool`) and use screenshots only for visual proof.
 
-Desk state is in memory; **reloading resets the demo**. The Home tour visit marker persists in localStorage (`heyamara:home-tour-seen` = `true`). Home opens its tour automatically once per browser origin, after its entrance and panel reveals finish. The entrance itself replays after a reload and runs once per mounted desk session. Remove only that key to test a first visit again. The question-mark button always allows manual replay.
+Talent profiles, placements, their dependency records, document metadata, notes, calendar and audit history persist in versioned browser-local storage. Other UI/conversation fixtures can still reset. See `docs/CANDIDATES.md` and `docs/PLACEMENTS.md`; this is not a shared backend. The Home tour visit marker persists in localStorage (`heyamara:home-tour-seen` = `true`). Home opens its tour automatically once per browser origin, after its entrance and panel reveals finish. The entrance plays once per member per local calendar day, tracked separately with `amara:home-welcome:v1:<memberId>`. Reloads on that day skip it; removing the tour marker only resets the tour. The question-mark button always allows manual replay.
 
 ## 4. Where things live
 
 | You want to change… | Go to |
 |---|---|
-| Nav items | `components/shell/sidebar.tsx` (`useNav`) |
+| Nav items | `components/shell/sidebar.tsx` (`useNav`): Recruit (Candidates, Placements, Calendar, Communication), Business (Clients, Prospects, Documents), Agency |
+| Talent database and candidate profiles | `components/candidates/`, `lib/people.ts`, `talentRows` in `lib/placements.ts` |
+| Company-specific recruitment processes | `components/placements/`, `lib/placements.ts`, `lib/candidate-pipeline.ts`, store `createPlacements` / `setPersonStatus` |
+| Prospect stages, "Find people" results | `lib/prospects.ts`, UI in `components/prospects/prospects-page.tsx` |
+| Calendar seed and Sydney date maths | `lib/calendar.ts`, UI in `components/calendar/calendar-page.tsx` |
+| Threads, call log, reply/nudge drafts | `lib/communication.ts`, UI in `components/communication/` (`updates.tsx` is the old Follow-ups composer) |
+| Tasks and notes seed | `lib/tasks.ts`; shared UI in `components/records/` (`TaskList`, `Notes`, `History`, `RecordTabs`) |
+| Analytics and Sales numbers | `lib/analytics.ts`; charts in `components/home/charts.tsx` |
+| Home, Documents and Team subpage navigation | `components/ui/subpage-tabs.tsx` |
+| Daily Home welcome gate | `lib/home-entrance.ts`; local browser calendar day and per-member localStorage marker |
+| Status pill menu, Table/Board toggle | `components/ui/menu.tsx` (`StatusMenu`, `Segmented`) |
 | Ask drawer UI / shortcut | `components/shell/ask-drawer.tsx` |
 | What the drawer knows about a page, and its answers | `lib/ask.ts` (`askContext`, `askReply`, `routeKey`) |
 | Generic Amara answers on Home / Chat | `lib/amara-chat.ts` (`amaraReply`, intent order matters) |
@@ -56,7 +66,8 @@ Desk state is in memory; **reloading resets the demo**. The Home tour visit mark
 ## 5. Conventions
 
 - One folder per feature in `components/`; routes in `app/` are thin.
-- Cross-page selection goes through store setters (`selectApplicant`, `selectFollowUp`, `selectCandidate`, `setJobFilter`, `setTeamView`), not query strings.
+- Cross-page selection goes through store setters (`setFocusPerson`, `setFocusProspect`, `selectThread`, `selectFollowUp`, `setJobFilter`, `setTeamView`), not query strings. `useOpenSubject()` in `components/records/tasks.tsx` opens any client, prospect or candidate.
+- Anything about a record logs with `subjectId` so the record's History tab can read it.
 - Every user action calls `log()` so it appears in the deal Activity and the Audit log.
 - Dynamic routes: read `params` inside `<Suspense fallback={<PageSkeleton/>}>` and `generateStaticParams` returns at least one id. `/clients/[id]` and `/deals/[id]` handle unknown ids in the client view (records created in-session only exist in state); `/learnings/[id]` uses `notFound()`.
 - New AI reply shapes must reuse `Block` types (`candidates | drafts | invoices | metrics | steps | list`) so the thread renders them.
@@ -69,18 +80,21 @@ Desk state is in memory; **reloading resets the demo**. The Home tour visit mark
 - `.amara-edge` is unlayered CSS with `position: relative`; it beats Tailwind utilities. To position an AmaraButton absolutely, wrap it in a positioned span.
 - `AmaraMark` gradients need unique ids (`useId`), already handled; don't hard-code ids in new SVGs.
 - After deleting a route, `rm -rf .next/types` before running tsc.
+- If a long-running `next dev` serves new pages with 500s that read like missing store fields, its server copy of `lib/store.tsx` is stale: touch `lib/store.tsx` and `app/layout.tsx` and reload.
 - Home invoice clients must match names in `lib/agency.ts` clients, because client pages filter invoices by name (`invoicesFor`). Home Tasks still use dummy company names (B-005).
 
 ## 7. Current state
 
-Working: Home (Overview / Analytics, Day 1 / Day 30), Ask drawer, /chat, ⌘K search, Clients (cards / list, detail with invoices), Applicants (screening / original), Candidates, Pipeline, Deal page, Follow-ups (blank + Draft with Amara), Documents, Team (members / leaderboard), Audit log, Learnings, tours.
+Working: Home (Overview / Analytics / Sales, Day 1 / Day 30), Ask drawer, /chat, ⌘K search, Candidates (data-only talent library with expanding profiles), Placements (list / board, independent status per candidate–client process), Calendar, Communication (inbox, no reply yet, calls, waiting on you), Clients (active only, detail with tasks, notes, invoices), Prospects (table / board, expanding rows), Deal page, Documents, Team (members / leaderboard), Audit log, Learnings, tours.
+
+Redirects: `/applicants` → `/candidates`; `/pipeline` → `/placements`; `/follow-ups` → `/communication`.
 
 Hidden: The Sum (`/sum`).
 
 ## 8. Next up
 
-1. **Waiting on Rayhan:** go-ahead for "Tasks → Follow-ups" (B-006).
-2. Rename Home Tasks companies to real clients/prospects (B-005).
+1. Rayhan's review of the staging merge (13 Oct): naming, status list, Sales semantics.
+2. B-033 board drag-and-drop check, B-034 Calendar Day view on phones.
 3. Submission write-up, then deploy **only after Rayhan says yes**.
 
 ## 9. Handoff checklist for the next agent

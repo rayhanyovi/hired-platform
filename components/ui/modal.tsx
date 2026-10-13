@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cx } from "./primitives";
+
+const subscribe = () => () => {};
+let openModals = 0;
+let bodyOverflow = "";
 
 export function Modal({
   title,
@@ -20,20 +25,36 @@ export function Modal({
   size?: "md" | "lg";
 }) {
   const panel = useRef<HTMLDivElement>(null);
-
+  const close = useRef(onClose);
+  useEffect(() => { close.current = onClose; }, [onClose]);
+  const mounted = useSyncExternalStore(subscribe, () => true, () => false);
   useEffect(() => {
+    if (!mounted) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
     panel.current?.querySelector<HTMLElement>("input, select, textarea, button:not([data-close])")?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
+    const onKey = (e: KeyboardEvent) => {
+      const dialogs = document.querySelectorAll('[role="dialog"]');
+      if (!dialogs.item(dialogs.length - 1)?.contains(panel.current)) return;
+      if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); close.current(); }
+      if (e.key === "Tab") {
+        const controls = Array.from(panel.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex="0"]') ?? []).filter((el) => el.getClientRects().length);
+        const first = controls[0], last = controls.at(-1);
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    if (openModals++ === 0) bodyOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey, true);
+      if (--openModals === 0) document.body.style.overflow = bodyOverflow;
+      previousFocus?.focus();
     };
-  }, [onClose]);
+  }, [mounted]);
+  if (!mounted) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:px-4" role="dialog" aria-modal="true" aria-label={title}>
       <button aria-label="Close" data-close className="absolute inset-0 animate-fade bg-black/60" onClick={onClose} />
       <div
@@ -60,7 +81,7 @@ export function Modal({
         <div className="overflow-y-auto px-5 py-5">{children}</div>
         {footer && <footer className="flex items-center justify-end gap-2 border-t border-line px-5 py-3">{footer}</footer>}
       </div>
-    </div>
+    </div>, document.body
   );
 }
 

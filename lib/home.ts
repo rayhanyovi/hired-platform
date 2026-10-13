@@ -46,19 +46,20 @@ const ZERO: Record<MetricKind, MetricValue> = {
 
 export const metricsFor = (stage: Stage, range: Range) => (stage === "day1" ? ZERO : METRICS_DAY30[range]);
 
-/* ── Tasks ─────────────────────────────────────────────────────────── */
+/* ── Quiet clients ─────────────────────────────────────────────────── */
 
+/** Clients and prospects that have gone quiet. Amara's follow-up drafts read from these. */
 export type Task = { id: string; company: string; initials: string; detail: string; daysAgo: number; priority: 1 | 2 | 3 };
 
 export const TASKS: Task[] = [
-  { id: "t1", company: "Eclipse Solutions", initials: "ES", detail: "no reply to your last email", daysAgo: 28, priority: 3 },
-  { id: "t2", company: "Citadel Group", initials: "CG", detail: "no reply to your shortlist", daysAgo: 28, priority: 3 },
-  { id: "t3", company: "Catalyst Partners", initials: "CP", detail: "no reply to your last email", daysAgo: 28, priority: 2 },
-  { id: "t4", company: "Catalyst Distribution", initials: "CD", detail: "no reply to your TOB", daysAgo: 28, priority: 2 },
-  { id: "t5", company: "Beacon Systems", initials: "BS", detail: "no reply to your last email", daysAgo: 28, priority: 2 },
-  { id: "t6", company: "Cedar Holdings", initials: "CH", detail: "no reply to your intro call", daysAgo: 28, priority: 1 },
-  { id: "t7", company: "Meridian Technologies", initials: "MT", detail: "no reply to your last email", daysAgo: 28, priority: 1 },
-  { id: "t8", company: "Summit Resources", initials: "SR", detail: "no reply to your proposal", daysAgo: 28, priority: 1 },
+  { id: "t1", company: "Fernhill Foods", initials: "FF", detail: "no reply to your intro email", daysAgo: 6, priority: 3 },
+  { id: "t2", company: "Opal Insurance", initials: "OI", detail: "no reply to your capabilities deck", daysAgo: 9, priority: 3 },
+  { id: "t3", company: "Corvid Labs", initials: "CL", detail: "no reply to your TOB", daysAgo: 4, priority: 3 },
+  { id: "t4", company: "Marlowe Studios", initials: "MS", detail: "no reply to your last email", daysAgo: 12, priority: 2 },
+  { id: "t5", company: "Harbour & Vine", initials: "HV", detail: "no reply to your intro call", daysAgo: 8, priority: 2 },
+  { id: "t6", company: "Ember AI", initials: "EA", detail: "no reply to your proposal", daysAgo: 5, priority: 2 },
+  { id: "t7", company: "Lumen Logistics", initials: "LL", detail: "no reply to your Q4 check-in", daysAgo: 7, priority: 1 },
+  { id: "t8", company: "Pinecrest Pay", initials: "PP", detail: "no reply to your shortlist", daysAgo: 4, priority: 1 },
 ];
 
 /** A new member's first steps instead of follow-ups. */
@@ -144,6 +145,6 @@ export const SUGGESTIONS: Record<Stage, string[]> = {
 };
 
 export const PLACEHOLDERS: Record<Stage, string[]> = {
-  day30: ["Find top candidates…", "Draft a follow-up to Eclipse Solutions…", "Which invoices are outstanding?", "Prep me for my next client call…"],
+  day30: ["Find top candidates…", "Draft a follow-up to Fernhill Foods…", "Which invoices are outstanding?", "Prep me for my next client call…"],
   day1: ["Tell me about your agency…", "Find top candidates…", "Who should I call first?"],
 };

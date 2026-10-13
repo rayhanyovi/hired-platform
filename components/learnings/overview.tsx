@@ -8,6 +8,7 @@ import { useDesk } from "@/lib/store";
 import { Page, PageHeader } from "../ui/page-header";
 import { cx } from "../ui/primitives";
 import { KindIcon, ProgressBar, VideoPlaceholder } from "./parts";
+import { Segmented } from "../ui/menu";
 
 type Filter = "all" | LessonKind;
 
@@ -73,22 +74,7 @@ export function LearningsOverview() {
       )}
 
       <div data-tour="lesson-filters" className="mb-6 flex items-center justify-between gap-4">
-        <div className="inline-flex rounded-lg border border-line bg-surface p-0.5" role="tablist" aria-label="Filter lessons">
-          {FILTERS.map((f) => (
-            <button
-              key={f.id}
-              role="tab"
-              aria-selected={filter === f.id}
-              onClick={() => setFilter(f.id)}
-              className={cx(
-                "h-7 rounded-md px-3 text-[12px] transition-colors",
-                filter === f.id ? "bg-raised text-fg shadow-[0_0_0_1px_rgb(255_255_255/0.06)]" : "text-fg-muted hover:text-fg",
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <Segmented label="Filter lessons" value={filter} onChange={setFilter} options={FILTERS.map((f) => ({ id: f.id, label: f.label }))} />
         <span className="hidden text-[12px] text-fg-faint sm:inline">
           {TRACKS.length} tracks · {LESSONS.reduce((s, l) => s + l.minutes, 0)} min total
         </span>

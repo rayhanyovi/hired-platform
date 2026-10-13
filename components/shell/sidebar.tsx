@@ -6,24 +6,28 @@ import { usePathname } from "next/navigation";
 import {
   Bell,
   Building2,
+  CalendarDays,
   Check,
   CircleHelp,
-  Columns3,
   Ellipsis,
   FileText,
   GraduationCap,
   Inbox,
+  ListChecks,
   LayoutGrid,
   Menu,
   MessagesSquare,
-  MessageSquareText,
+  NotebookPen,
   PanelLeftClose,
   ScrollText,
   Search,
   ShieldCheck,
+  Target,
   UsersRound,
+  Waypoints,
   X,
 } from "lucide-react";
+import { isOverdue, sameDay, TODAY } from "@/lib/calendar";
 import { ROLE_LABEL } from "@/lib/agency";
 import { RECRUITER } from "@/lib/data";
 import { money, needsAttention } from "@/lib/deal";
@@ -36,29 +40,32 @@ import { AskButton } from "./ask-drawer";
 type NavItem = { href: string; label: string; icon: typeof Menu; count?: number; attention?: boolean };
 
 export function useNav() {
-  const { deals, followUps, applicants, approvals, isOwner } = useDesk();
-  const toReview = applicants.filter((a) => a.status === "new").length;
+  const { deals, followUps, threads, calendar, clients, tasks, approvals, isOwner } = useDesk();
   const pending = approvals.filter((a) => a.status === "pending").length;
   const groups: { label?: string; items: NavItem[] }[] = [
     {
       items: [
         { href: "/", label: "Home", icon: LayoutGrid },
         { href: "/chat", label: "Chat", icon: MessagesSquare },
+        { href: "/notes", label: "Notes", icon: NotebookPen },
+        { href: "/tasks", label: "Tasks", icon: ListChecks, count: tasks.filter((t) => !t.done && isOverdue(t.due)).length, attention: true },
       ],
     },
     {
+      // Talent profiles and client-specific placement processes are separate.
       label: "Recruit",
       items: [
-        { href: "/clients", label: "Clients", icon: Building2 },
-        { href: "/applicants", label: "Applicants", icon: Inbox, count: toReview },
         { href: "/candidates", label: "Candidates", icon: UsersRound },
-        { href: "/pipeline", label: "Pipeline", icon: Columns3, count: deals.filter(needsAttention).length, attention: true },
-        { href: "/follow-ups", label: "Follow-ups", icon: MessageSquareText, count: followUps.length },
+        { href: "/placements", label: "Placements", icon: Waypoints, count: deals.filter(needsAttention).length, attention: true },
+        { href: "/calendar", label: "Calendar", icon: CalendarDays, count: calendar.filter((e) => sameDay(e.start, TODAY)).length },
+        { href: "/communication", label: "Communication", icon: Inbox, count: followUps.length + threads.filter((t) => t.unread).length, attention: true },
       ],
     },
     {
       label: "Business",
       items: [
+        { href: "/clients", label: "Clients", icon: Building2 },
+        { href: "/prospects", label: "Prospects", icon: Target, count: clients.filter((c) => c.status === "prospect" && c.stage === "follow-up").length },
         { href: "/documents", label: "Documents", icon: FileText },
         // The Sum (/sum) is hidden from the menu for now; the route still works.
       ],
@@ -76,7 +83,7 @@ export function useNav() {
 }
 
 const isActive = (pathname: string, href: string) =>
-  href === "/" ? pathname === "/" : pathname.startsWith(href) || (href === "/pipeline" && pathname.startsWith("/deals"));
+  href === "/" ? pathname === "/" : pathname.startsWith(href) || (href === "/placements" && pathname.startsWith("/deals"));
 
 /* ── Rail ─────────────────────────────────────────────────────────── */
 
@@ -271,13 +278,15 @@ function usePopover() {
 
 /** Everything waiting on you, in one bell. */
 function Notifications() {
-  const { approvals, applicants, followUps, deals, isOwner } = useDesk();
+  const { approvals, applicants, followUps, deals, threads, tasks, isOwner } = useDesk();
   const { open, setOpen, ref } = usePopover();
   const items = [
     { n: isOwner ? approvals.filter((a) => a.status === "pending").length : 0, text: "waiting for your approval", href: "/team" },
-    { n: deals.filter(needsAttention).length, text: "deals going cold", href: "/pipeline" },
-    { n: followUps.length, text: "people waiting for an update", href: "/follow-ups" },
-    { n: applicants.filter((a) => a.status === "new").length, text: "applicants to review", href: "/applicants" },
+    { n: deals.filter(needsAttention).length, text: "deals going cold", href: "/placements" },
+    { n: followUps.length, text: "people waiting for an update", href: "/communication" },
+    { n: threads.filter((t) => t.unread).length, text: "unread messages", href: "/communication" },
+    { n: applicants.filter((a) => a.status === "new").length, text: "profiles to complete", href: "/candidates" },
+    { n: tasks.filter((t) => !t.done && isOverdue(t.due)).length, text: "overdue tasks", href: "/tasks" },
   ].filter((i) => i.n > 0);
   const total = items.reduce((s, i) => s + i.n, 0);
 
@@ -303,7 +312,7 @@ function Notifications() {
             <p className="px-4 py-6 text-center text-[13px] text-fg-faint">All clear.</p>
           ) : (
             items.map((i) => (
-              <Link key={i.href} href={i.href} onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-[13px] transition-colors hover:bg-raised">
+              <Link key={i.text} href={i.href} onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-[13px] transition-colors hover:bg-raised">
                 <span className="w-6 text-right font-mono text-fg num">{i.n}</span>
                 <span className="text-fg-muted">{i.text}</span>
               </Link>
@@ -395,7 +404,7 @@ function NavLink({ item, active, onNavigate }: { item: NavItem; active: boolean;
   );
 }
 
-const MOBILE_PRIMARY = ["/", "/chat", "/pipeline", "/follow-ups"];
+const MOBILE_PRIMARY = ["/", "/chat", "/candidates", "/communication"];
 
 export function MobileNav() {
   const pathname = usePathname();

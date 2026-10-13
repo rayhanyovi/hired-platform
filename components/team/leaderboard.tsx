@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { TableWorkspace } from "../ui/table-workspace";
 import { ROLE_LABEL } from "@/lib/agency";
 import { NETWORK_BOARD, TEAM_BOARD, type LeaderRow } from "@/lib/home";
 import { useDesk } from "@/lib/store";
 import { aud } from "../home/overview";
 import { METRIC_ORDER, METRICS, MetricIcon } from "../ui/metrics";
 import { AmaraButton, AmaraTag, Avatar, cx } from "../ui/primitives";
+import { Segmented } from "../ui/menu";
 
 /** The full leaderboard: your team, or everyone on HeyAmara this month. */
 export function Leaderboard() {
@@ -24,19 +26,15 @@ export function Leaderboard() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="inline-flex rounded-lg border border-line bg-surface p-0.5" role="tablist" aria-label="Leaderboard">
-          {(["team", "network"] as const).map((b) => (
-            <button
-              key={b}
-              role="tab"
-              aria-selected={board === b}
-              onClick={() => setBoard(b)}
-              className={cx("h-7 rounded-md px-3 text-[12px] transition-colors", board === b ? "bg-raised text-fg" : "text-fg-muted hover:text-fg")}
-            >
-              {b === "team" ? "Your team" : "HeyAmara network"}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="Leaderboard"
+          value={board}
+          onChange={setBoard}
+          options={[
+            { id: "team", label: "Your team" },
+            { id: "network", label: "HeyAmara network" },
+          ]}
+        />
         <span className="text-[12px] text-fg-faint">This month</span>
         <AmaraButton size="sm" className="ml-auto" onClick={() => ask("Who's top of the leaderboard?")}>
           Explain the gaps
@@ -50,7 +48,7 @@ export function Leaderboard() {
         </p>
       )}
 
-      <div data-tour="team-leaderboard" className="overflow-x-auto rounded-xl border border-line bg-surface">
+      <TableWorkspace title="Leaderboard"><div data-tour="team-leaderboard" className="overflow-x-auto rounded-xl border border-line bg-surface">
         <table className="w-full min-w-[760px] text-[13px]">
           <thead>
             <tr className="border-b border-line text-[11px] text-fg-faint">
@@ -101,7 +99,7 @@ export function Leaderboard() {
             })}
           </tbody>
         </table>
-      </div>
+      </div></TableWorkspace>
       <p className="text-[12px] text-fg-faint">Score weights later stages more: a placement counts for far more than a call.</p>
     </div>
   );

@@ -1,6 +1,6 @@
 import type { AuditModule, AuditRecord } from "./types";
 
-export const AUDIT_MODULES: AuditModule[] = ["Home", "Pipeline", "Clients", "Applicants", "Candidates", "Follow-ups", "Documents", "Approvals", "Team", "Learnings", "System"];
+export const AUDIT_MODULES: AuditModule[] = ["Home", "Pipeline", "Clients", "Prospects", "Applicants", "Candidates", "Follow-ups", "Communication", "Calendar", "Tasks", "Documents", "Approvals", "Team", "Learnings", "System"];
 
 export function moduleForAction(action: string): AuditModule {
   const prefix = action.split(".")[0];
@@ -9,9 +9,13 @@ export function moduleForAction(action: string): AuditModule {
   if (prefix === "document") return "Documents";
   if (prefix === "approval") return "Approvals";
   if (prefix === "client" || prefix === "job") return "Clients";
+  if (prefix === "prospect") return "Prospects";
+  if (prefix === "message" || prefix === "call") return "Communication";
+  if (prefix === "calendar") return "Calendar";
+  if (prefix === "task" || prefix === "note") return "Tasks";
   if (prefix === "team") return "Team";
   if (prefix === "learning") return "Learnings";
-  if (action === "sourcing.contacted") return "Candidates";
+  if (action === "sourcing.contacted" || prefix === "candidate") return "Candidates";
   if (prefix === "sourcing" || action === "amara.screened") return "Applicants";
   return "System";
 }

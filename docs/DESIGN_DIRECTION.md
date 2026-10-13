@@ -68,7 +68,8 @@ Figures use `.num` (tabular numerals). Big metric values are 32px Inter, not ser
 | `AmaraByline` | Header on AI-written blocks: "Amara's read", "Drafting", "Screening" |
 | `Button` primary | White fill with dark text. Human commitment: Send, Shortlist, Add client |
 | `Button` secondary / ghost | Everything else |
-| Segmented tabs | Inset pill group on `surface`, selected = `raised` |
+| Subpage tabs | Shared `SubpageTabs` on Home, Documents and Team: icon + label, rounded selected pill with border, no enclosing group border |
+| Segmented toggles | Inset pill group on `surface`, selected = `raised`; used for filters and list/board switches |
 | Metric card | Icon + label row (Ask on hover) → 32px value → quiet trend line |
 
 ## 5. Patterns
@@ -78,14 +79,16 @@ Figures use `.num` (tabular numerals). Big metric values are 32px Inter, not ser
 - **Original vs AI**: tabs "Amara's screening | Application", with a provenance line linking between them.
 - **Blank then draft**: composers start empty with a placeholder that suggests both paths (write it yourself or let Amara draft).
 - **Hide numbers**: an eye toggle masks money and counts for screen sharing.
-- **Home entrance**: on the first Home visit after a reload, a centred orb shifts left for a character-typed welcome. The greeting moves into its normal layout position before Amara’s stage-specific message appears. The purple sky glow then contracts and fades, followed by Overview, Tasks, Invoices and Leaderboard revealing in sequence. Internal navigation back to Home skips the entrance. Reduced motion skips the introduction.
+- **Home entrance**: once per member per local calendar day in the same browser/origin, a centred orb shifts left for a character-typed welcome. The greeting moves into its normal layout position before Amara’s stage-specific message appears. The purple sky glow then contracts and fades, followed by Overview, Tasks, Invoices and Leaderboard revealing in sequence. Reloads and internal navigation back to Home on that day skip the entrance. The day is claimed when the entrance starts, even if navigation interrupts it. Reduced motion skips the introduction.
 - **Tours**: `?` or the help button runs a per-page tour targeting `data-tour` attributes. The first-visit Home tour waits for the entrance and panels to finish.
+- **Expand in place**: on Candidates and Prospects a row opens inside the table (who they are · what's going on · tasks and notes, with the obvious next step in a footer) instead of navigating away. Use it for any list where people work through records one by one.
+- **One status per record**: a status pill with a dot opens a menu; options that can't be reached from here stay visible but disabled, with the reason underneath. Dots are neutral except funnel stages (metric colours), "needs you" (amber) and done (placements green).
 
 ## 6. Responsive
 
 - ≥1280px: rail + page; Ask drawer pushes content aside (`xl:pr-[440px]`).
 - <1280px: drawer overlays and closes when a link inside it is followed.
-- <768px: mobile header (search + compact Ask), bottom nav (Home, Chat, Pipeline, Follow-ups, More), wide tables scroll horizontally inside their card.
+- <768px: mobile header (search + compact Ask), bottom nav (Home, Chat, Candidates, Communication, More), wide tables scroll horizontally inside their card.
 
 ## 7. Don'ts
 
@@ -93,3 +96,12 @@ Figures use `.num` (tabular numerals). Big metric values are 32px Inter, not ser
 - No serif for numbers or body copy.
 - No auto-generated AI content on page load where the user might not need it.
 - No emoji, no illustration filler, no glassmorphism beyond the drawer backdrop.
+
+
+## Candidates and Placements (13 October review)
+
+Candidates is a neutral talent database, with no pipeline status, application queue or board. Its expandable records contain Profile, History and Notes. Placements holds recruiting stages and keeps list expansion plus a board whose cards open the next required form. One talent profile supports several independent company/role processes. Clients, Candidates and Placements share the native `TableHeader` treatment: 11px uppercase muted labels, 0.06em tracking, normal weight, 12px vertical padding and the standard divider. Status washes belong to placement rows; AI styling remains reserved for assistant actions and drafts.
+
+### Expanded tables
+
+Data table/list workspaces use `TableWorkspace`: Expand fills the area below the app header, hiding page overviews behind the data workspace while keeping the navigation rail available. Filters and row state remain mounted. Back to page or Escape restores the page; an open modal takes Escape first. Documents rendered as document content and nested audit field diffs are not separate workspaces. Candidate collections are neutral sheet tabs below the table, with counts and a plus button for creation.

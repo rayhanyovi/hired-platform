@@ -1,4 +1,3 @@
-import { STAGES } from "./data";
 /**
  * Page tours. Each step points at an element marked with `data-tour="<target>"`.
  * Steps without a target (or whose target isn't on screen) show as a centred card.
@@ -12,13 +11,13 @@ const TOURS: Record<string, Tour> = {
     steps: [
       { target: "home-hero", title: "Your first screen", body: "A welcome and one line from Amara about what matters today. A new member gets first steps; an established desk gets what needs attention." },
       { target: "page-tour", title: "A guide for every page", body: "Use this question-mark button to tour the page you're on. Each page has its own walkthrough explaining its features and actions. You can replay a tour whenever you need help, or press ? when you're not typing." },
-      { target: "ask-amara", title: "Ask HeyAmara, from anywhere", body: "Opens Amara in a drawer that already knows what page you're on. On Follow-ups she sees your queue; on a deal she sees that deal. ⌘J works too." },
+      { target: "ask-amara", title: "Ask HeyAmara, from anywhere", body: "Opens Amara in a drawer that already knows what page you're on. On Communication she sees who's waiting; on a deal she sees that deal. ⌘J works too." },
       { target: "search", title: "Search everything", body: "⌘K finds deals, clients, candidates, roles and documents. Amara understands phrases like 'going cold' or 'unsigned', and anything that reads like a question goes straight to her." },
       { target: "home-metrics", title: "Your funnel", body: "Calls through to placements, with change against the previous period. Click a metric to ask Amara why it moved." },
-      { target: "home-tasks", title: "Tasks", body: "Clients who've gone quiet. Tick them off, or let Amara draft every follow-up at once." },
+      { target: "home-tasks", title: "Tasks", body: "Every task on the desk, whether it's about a client, a prospect or a candidate. Click the chip to open the record, add one with +, or let Amara draft the follow-ups." },
       { target: "home-invoices", title: "Invoices", body: "Drafts, outstanding and overdue at a glance, coloured by status. Click a client to see all their invoices. Amara can tell you which to chase." },
       { target: "home-leaderboard", title: "Leaderboard", body: "Your team, or the whole HeyAmara network. A solo desk has no team yet, so the network shows where you stand." },
-      { target: "home-tabs", title: "Overview and Analytics", body: "Analytics shows how each stage converts into the next and the fees you've placed each month." },
+      { target: "home-tabs", title: "Overview, Analytics and Sales", body: "Analytics covers revenue, lead generation, conversion and growth. Sales tracks winning clients: dials, calls booked, show and close rates, and cash in against target." },
       { target: "home-stage", title: "Demo: day 1 vs day 30", body: "Switch between a member who just joined and an established desk to see how Home adapts." },
     ],
   },
@@ -32,11 +31,11 @@ const TOURS: Record<string, Tour> = {
   "/clients": {
     name: "Clients",
     steps: [
-      { target: "page-header", title: "Everyone you hire for", body: "Active clients and the prospects you're pitching, with every role they're hiring for." },
-      { target: "client-stats", title: "The agency at a glance", body: "How many clients and prospects you have, open roles, and the fees currently in play." },
-      { target: "client-filters", title: "Filter and search", body: "Switch between active clients and prospects, cards or a compact list, or search by company or role." },
-      { target: "client-cards", title: "One row per company", body: "Each company shows their roles, who you have for each one, and whether their Terms of Business are signed. Click a company or a role to drill in." },
-      { target: "page-actions", title: "Add a client", body: "Add a new client or prospect. You can post roles for them straight away." },
+      { target: "page-header", title: "Everyone you hire for", body: "Active clients, with every role they're hiring for. Companies you're still pitching live in Prospects." },
+      { target: "client-stats", title: "The agency at a glance", body: "Active clients, prospects, open roles, and the fees currently in play." },
+      { target: "client-filters", title: "View and search", body: "A list (the default) or cards, or search by company or role." },
+      { target: "client-cards", title: "One row per company", body: "Each company shows their roles, who you have for each one, and whether their Terms of Business are signed. Click a row to open it in place: roles, contacts, history, tasks and notes." },
+      { target: "page-actions", title: "Add a client", body: "Add a company you're already hiring for. You can post roles for them straight away." },
     ],
   },
   "/clients/[id]": {
@@ -46,40 +45,62 @@ const TOURS: Record<string, Tour> = {
       { target: "client-roles", title: "Every role they're hiring for", body: "Each role lists everyone attached to it: applicants still to screen, shortlisted people, deals in the pipeline, and placements." },
       { target: "funnel", title: "The funnel per role", body: "To review → Shortlisted → In pipeline → Placed. A quick read on where each role is stuck." },
       { target: "client-invoices", title: "Invoices", body: "Everything you've billed this client: paid, outstanding and drafts. Amara can draft the reminder for anything unpaid." },
+      { target: "client-tasks", title: "Tasks and notes", body: "Tasks about this client show here and on Home. Notes are for the team: how they like to work, who decides." },
       { target: "client-aside", title: "Contact, terms and history", body: "Who to call, your agreed fee, their documents, and recent activity across all their roles." },
     ],
   },
-  "/applicants": {
-    name: "Applicants",
-    steps: [
-      { target: "page-header", title: "Every application, screened", body: "Applications from your job ads and inbox land here. Amara reads each CV against the brief before you do." },
-      { target: "page-actions", title: "Sync", body: "Pulls new applications from Seek, LinkedIn and email. In this demo, three new people arrive." },
-      { target: "applicant-list", title: "The pile", body: "New arrivals are marked with a dot. The list is sorted by fit, strongest first. Use J and K to move through it." },
-      { target: "screening", title: "Amara's screening", body: "What matches the brief, what's missing, and a one-line verdict. It's a recommendation, not a decision." },
-      { target: "applicant-views", title: "The original application", body: "Check Amara's read against the source: the email and its attachments, or the job board's screening answers, cover letter and CV." },
-      { target: "applicant-decide", title: "You decide", body: "Shortlist (S) sends them to your candidate pool. Decline (D) queues an honest update in Follow-ups, so nobody is left hanging." },
-    ],
-  },
   "/candidates": {
-    name: "Candidates",
-    steps: [
-      { target: "page-header", title: "Your shortlist", body: "Everyone who passed screening, plus people you've sourced yourself, across every client." },
-      { target: "candidate-filters", title: "Narrow it down", body: "Filter by status or by role, or search by name, title or location." },
-      { target: "candidate-list", title: "Work the list", body: "Click a name for Amara's notes. Reach out logs your outreach. Add to pipeline turns them into a deal for that role." },
+    name: "Candidates", steps: [
+      { target: "page-header", title: "Your talent pool", body: "Save each person once. Experience, qualifications, preferences and documents belong to this shared profile." },
+      { target: "people-filters", title: "Find people by their data", body: "Filter by collection or owner, and search by name, skill or location. Amara helps identify missing information." },
+      { target: "people-table", title: "Expand a profile", body: "Click a row to open the profile, notes and full recorded history. Recruitment statuses live on Placements." },
+      { target: "candidate-collections", title: "Collections", body: "Group a person into multiple talent pools without duplicating their profile." },
     ],
   },
-  "/pipeline": {
-    name: "Pipeline",
+  "/placements": {
+    name: "Placements", steps: [
+      { target: "page-header", title: "One process per company", body: "A saved candidate can have several independent placements. Closing one keeps the other processes and profile available." },
+      { target: "placement-filters", title: "List and board", body: "List rows expand in place. Clicking a board card opens its next required form." },
+      { target: "page-actions", title: "Start placements", body: "Select one saved candidate and multiple roles across companies. Amara can suggest title matches; you choose the processes." },
+    ],
+  },
+  "/prospects": {
+    name: "Prospects",
     steps: [
-      { target: "page-header", title: "Every live deal", body: "One card per candidate per role, from sourced to placed." },
-      { target: "pipeline-filters", title: "Focus", body: "Show only deals that need attention, or one client at a time." },
-      { target: "board", title: "Heat, not just stage", body: "The bar under each deal drains while nobody touches it, and drains faster near an offer. Drag a card to change its stage. Click to open it." },
-      ...STAGES.map((st, i) => ({
-        target: `stage-${st.id}`,
-        title: `${i + 1}. ${st.label}`,
-        body: st.description,
-      })),
-      { target: "page-actions", title: "Weighted value and new deals", body: "Fees weighted by how likely each stage is to close. New deal takes you to your candidate pool to pick someone." },
+      { target: "page-header", title: "Companies you're pitching", body: "Every prospect from first email to signed terms. Once they sign, make them a client." },
+      { target: "prospect-stats", title: "The sales pipeline", body: "How many prospects you have, how many are in conversation, terms out, and who needs chasing." },
+      { target: "prospect-filters", title: "Table or board", body: "Work the table, or drag prospects between stages on the board." },
+      { target: "prospect-table", title: "Click a row to open it", body: "Contacts (Amara can find more people there), history, tasks and notes. Change the stage from the pill." },
+      { target: "page-actions", title: "Add a prospect", body: "It starts at New and appears in Sales on Home as it moves." },
+    ],
+  },
+  "/tasks": {
+    name: "Tasks",
+    steps: [
+      { target: "page-header", title: "Every task, one list", body: "Tasks from every client, prospect and candidate. Nothing is filtered out by default." },
+      { target: "tasks-add", title: "Add one", body: "Type it, pick what it's about (or leave it General), a due date and a priority." },
+      { target: "tasks-filters", title: "Narrow it down", body: "Filter by what the task is about, open or done, or only yours." },
+      { target: "tasks-list", title: "Grouped by when", body: "Overdue first, then today, the next 7 days, later and no date. Click a chip to open the record." },
+    ],
+  },
+  "/calendar": {
+    name: "Calendar",
+    steps: [
+      { target: "calendar-filters", title: "What's on", body: "Interviews, meetings, calls, follow-ups and start dates, plus tasks on the day they're due. Turn types on or off." },
+      { target: "calendar-grid", title: "Day, week or month", body: "Click an event for details and a link to the deal or record. Click an empty slot to book something." },
+      { target: "calendar-upcoming", title: "Coming up", body: "Your next few things, and the tasks due today." },
+    ],
+  },
+  "/communication": {
+    name: "Communication",
+    steps: [
+      { target: "comm-stats", title: "What needs you", body: "Replies waiting on you, people owed an update, threads that went quiet, and calls this week. Click one to jump there." },
+      { target: "comm-triage", title: "One conversation per person", body: "Email, SMS, WhatsApp, LinkedIn and calls with someone sit in one conversation. Needs you groups them by what to do, including new people who aren't on your desk yet; Done and Snoozed keep the rest out of the way." },
+      { target: "comm-labels", title: "Your labels", body: "Group conversations your own way. Pick a label to filter, or use the filter button. Right-click a label to rename it, nest one under it, recolour or delete it. Add labels to a conversation from its right-click menu." },
+      { target: "comm-list", title: "Work the list", body: "Each row says why it's here. Right-click for more, tick several to act on them together, or use J and K to move and E to mark done." },
+      { target: "comm-thread", title: "Everything in order", body: "Messages on every channel and every call, by day. Start a call from the phone icon and it's timed and logged." },
+      { target: "comm-reply", title: "Answer on any channel", body: "Pick the channel, insert a template, or ask Amara for a reply, a nudge or an honest update, then make it shorter, warmer or firmer. Send now or schedule it. Nothing goes out until you press Send." },
+      { target: "comm-context", title: "Who they are", body: "Their status or company stage, labels, what we know, what's coming up, tasks and notes. Someone new can be added as a candidate, a contact at a company, or a new prospect. Amara can summarise the whole conversation when you ask." },
     ],
   },
   "/deals/[id]": {
@@ -89,17 +110,6 @@ const TOURS: Record<string, Tour> = {
       { target: "deal-main", title: "Amara's read and next move", body: "Why this deal matters right now, and the one thing Amara would do next. Hit the button and it drafts the call notes or message for you." },
       { target: "discussion", title: "Discussion", body: "Notes for the team, @mentions, and approval requests. A recruiter asking for a fee below the floor goes to the Owner here." },
       { target: "deal-aside", title: "Details, documents, activity", body: "Fee and owner, documents for this deal (generate or log one), and the deal's full history from the audit log." },
-    ],
-  },
-  "/follow-ups": {
-    name: "Follow-ups",
-    steps: [
-      { target: "page-header", title: "Nobody gets ghosted", body: "Everyone waiting to hear from you, including people you've turned down." },
-      { target: "fu-list", title: "Who's waiting", body: "Sorted by how long they've waited. Three days or more is overdue." },
-      { target: "fu-controls", title: "Tone and channel", body: "Pick direct, warm or brief, and SMS, email or LinkedIn. Amara only drafts when you press Draft with Amara, so you never pay for drafts you don't use." },
-      { target: "fu-draft", title: "The draft", body: "Starts blank. Write it yourself, or let Amara draft it from your notes, then edit anything." },
-      { target: "fu-context", title: "What Amara used", body: "The facts behind the draft, so you can check it's right before it goes." },
-      { target: "fu-send", title: "You send", body: "Nothing goes out without you. ⌘↵ sends and moves you to the next person." },
     ],
   },
   "/documents": {

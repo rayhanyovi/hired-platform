@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CandidatesPage } from "@/components/sourcing/candidates";
+import { CandidatesPage } from "@/components/candidates/candidates-page";
 
 export const metadata: Metadata = { title: "Candidates · Amara Desk" };
 
